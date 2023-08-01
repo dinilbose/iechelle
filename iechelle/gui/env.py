@@ -293,7 +293,6 @@ class Environment(object):
     grid_circle_size = None
     clear_se_table2_button= None
 
-
     check_show_horizontal_lines = None
     check_make_grid  = None
     check_show_echelle = None
@@ -325,8 +324,13 @@ class Environment(object):
     ]
 
 
+    # New buttons catalog
 
-
+    selected_filename_text = None
+    open_folder_button = None
+    open_file_button = None
+    # selected_filename = None
+    # selected_filename = None
 
 
 

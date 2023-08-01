@@ -11,6 +11,8 @@ import pandas
 from bokeh.models.layouts import TabPanel, Tabs
 
 
+
+
 from catalog import Catalog
 from env import Environment
 from mode_selection import Interactive
@@ -24,10 +26,14 @@ Interactive()
 
 
 
+
 nxt_prv_button=row(env.next_button,env.previous_button,sizing_mode='fixed')
 
-tab_int_1=column(row(env.fig_tpfint,
-                     env.stretch_sliderint),
+tab_int_1=column(
+                # nxt_prv_button,
+                column(env.stretch_sliderint,
+                       env.fig_tpfint,
+                     ),
                 row(env.ll_button,
                     env.l_button,
                     env.dnu_slider,
@@ -54,31 +60,39 @@ tab_int_1=column(row(env.fig_tpfint,
 tab_interactive_layout = column(row(tab_int_1))
 
 
-flag_lay1 = column(env.text_flag_duplicate,
-                   env.text_flag_source,
-                   env.text_flag_check,
-                   env.save_userinput_button)
+# flag_lay1 = column(env.text_flag_duplicate,
+#                    env.text_flag_source,
+#                    env.text_flag_check,
+#                    env.save_userinput_button)
 
 next_lay1 = row(env.previous_button,
                 env.next_button)
 
 next_dflt_lay = column(next_lay1)
 
-query_lay1 = column(
-                row(env.text_cluster_query),
-                    env.update_cluster_button,
-                row(env.text_catalog_query),
-                    env.update_catalog_button,
-                row(env.int_select_sector),
-                row(env.text_id_mycatalog_query),
-                    env.update_id_mycatalog_button,
-                row(env.text_id_query),
-                    env.update_id_button
-                )
+# query_lay1 = column(
+#                 row(env.text_cluster_query),
+#                     env.update_cluster_button,
+#                 row(env.text_catalog_query),
+#                     env.update_catalog_button,
+#                 row(env.int_select_sector),
+#                 row(env.text_id_mycatalog_query),
+#                     env.update_id_mycatalog_button,
+#                 row(env.text_id_query),
+#                     env.update_id_button
+#                 )
 
-layer_1 = column(query_lay1,next_dflt_lay)
-notes_lay1 = column(env.text_Notes_w)
-layout_catalog=column(row(column(layer_1,flag_lay1),
+#layer_1 = column(query_lay1,next_dflt_lay)
+layer_1 = column(next_dflt_lay)
+
+# notes_lay1 = column(env.text_Notes_w)
+layout_catalog=column( row(env.open_file_button, env.selected_filename_text), 
+
+    row(
+                            # column(
+                                #layer_1,
+                                #  flag_lay1
+                                #  ),
                           tab_interactive_layout,
                           column(env.fig_other_periodogram,
                                  env.inverted_slider,
@@ -106,7 +120,7 @@ layout_catalog=column(row(column(layer_1,flag_lay1),
                                     #row(env.text_banner)
                                     )
 
-
+# layout_catalog = env.stretch_sliderint
 tab_c = TabPanel(child=layout_catalog, title = 'Mode Selection')
 tabs = Tabs(tabs = [tab_c])
 curdoc().add_root(tabs)

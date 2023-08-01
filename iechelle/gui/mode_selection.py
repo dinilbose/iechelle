@@ -2,7 +2,7 @@
 import logging
 import warnings
 import pandas as pd
-
+from pathlib import Path
 import numpy as np
 from matplotlib import pyplot as plt
 # from scipy.signal import find_peaks
@@ -188,7 +188,8 @@ class Interactive(Environment):
             label="Find Peak", button_type="success", width=150)
         self.env.find_peaks_button.on_click(self.find_peak_frequencies)
         #self.update_selection_tables()
-        self.env.tb_catalog_all.selected.on_change('indices',self.update_source)
+        
+        # self.env.tb_source.data.on_change('indices',self.update_source)
 
         self.plot_vertical_lines()
         self.inverted_slider()
@@ -214,7 +215,7 @@ class Interactive(Environment):
         
         self.trim_frequency()
 
-        self.env.tb_other_periodogram.data=old_data.data
+        # self.env.tb_other_periodogram.data=dict(old_data.data)
         self.clear_se_table1()
         self.clear_se_table2()
         self.update_plot(0, 0, 0)
@@ -228,27 +229,41 @@ class Interactive(Environment):
         ff, pp = self.read_fits_get_fp()
         mm = ['999']*(len(pp))
 
-        f = (ff*u.Hz).to(self.env.frequency_unit)
-        p = pp*self.env.power_unit
-        period = lk_prd_module.Periodogram(f, p)
-
-        self.periodogram = period
         self.env.minimum_frequency = 1  # 1
         self.env.maximum_frequency = 800  # 8000
         self.env.maxdnu = 50
         self.env.dnu_val = 24.8
-        tb_other_periodogram = ColumnDataSource(
-            data=dict(
-                frequency=list(self.periodogram.frequency.value),
-                power=list(self.periodogram.power.value),
-                Mode = mm,
-                # cuttoff=list(np.array([0])),
-            ))
+
+        f = (ff*u.Hz).to(self.env.frequency_unit)
+        p = pp*self.env.power_unit
+        if ff.any():
+            period = lk_prd_module.Periodogram(f, p)
+
+            self.periodogram = period
+
+            tb_other_periodogram = ColumnDataSource(
+                data=dict(
+                    frequency=list(self.periodogram.frequency.value),
+                    power=list(self.periodogram.power.value),
+                    Mode = mm,
+                    # cuttoff=list(np.array([0])),
+                ))
+        else:
+
+            self.periodogram = None
+
+            tb_other_periodogram = ColumnDataSource(
+                data=dict(
+                    frequency=list([]),
+                    power=list([]),
+                    Mode = list([]),
+                    # cuttoff=list(np.array([0])),
+                ))    
 
         # Intialize other periodgram
         fig_other_periodogram = figure(
-            plot_width=1400,
-            plot_height=600,
+            width=1400,
+            height=600,
             tools=["box_zoom", "wheel_zoom",
                    "lasso_select", "tap", "reset", "save"],
             title="Other Periodogram", tooltips=self.env.TOOLTIPS,
@@ -344,8 +359,8 @@ class Interactive(Environment):
                           ))
         else:
             print('Refereshing everything')
-
-        if self.env.check_show_echelle.active[0]==0:
+         
+        if self.env.check_show_echelle.active[0]==0 and not self.env.tb_other_periodogram.to_df().empty:
         # Load the values
             frequency = self.env.tb_other_periodogram.data['frequency'] * \
                 self.env.frequency_unit
@@ -379,7 +394,7 @@ class Interactive(Environment):
                         )
             )
 
-            self.env.tb_echelle_diagram.data = new_data.data
+            self.env.tb_echelle_diagram.data = dict(new_data.data)
         else:
             old_data = ColumnDataSource(
                 data=dict(image=[],
@@ -394,7 +409,7 @@ class Interactive(Environment):
                           # yy=[],
                           # freq_values=[],
                           ))
-            self.env.tb_echelle_diagram.data = old_data.data
+            self.env.tb_echelle_diagram.data = dict(old_data.data)
 
 
     def initialize_selection_tables(self):
@@ -599,7 +614,7 @@ class Interactive(Environment):
                 #                            source=self.env.tb_grid_source)
                 
         #print('Griding',self.env.check_make_grid.active)
-        if self.env.check_make_grid.active[0]==0:
+        if self.env.check_make_grid.active[0]==0 and not self.env.tb_other_periodogram.to_df().empty:
             cutt_off = float(self.env.echelle_noise_cuttoff_text.value)
             self.tb_constants_val.data['other_prd_cuttoff'] = list([cutt_off])
             
@@ -622,7 +637,7 @@ class Interactive(Environment):
                     Mode = mm,
                 )
             )
-            self.env.tb_grid_source.data = old_data.data
+            self.env.tb_grid_source.data = dict(old_data.data)
             self.apply_modes(table=self.tb_se_first_source.to_df())
             self.apply_modes(table=self.tb_se_second_source.to_df())
             val=int(self.env.grid_circle_size.value)
@@ -632,7 +647,7 @@ class Interactive(Environment):
                 val='999'
                 df_grid=self.env.tb_grid_source.to_df().query('Mode !=@val')
                 old_data=ColumnDataSource(df_grid.to_dict('list'))
-                self.env.tb_grid_source.data = old_data.data
+                self.env.tb_grid_source.data = dict(old_data.data)
 
 
 
@@ -646,33 +661,37 @@ class Interactive(Environment):
                     Mode=[],
                 )
             )
-            self.env.tb_grid_source.data = old_data.data
+            self.env.tb_grid_source.data = dict(old_data.data)
 
 
     def read_fits_get_fp(self):
         '''
         Test function: Read fits file and get f and p"
         '''
-
+        ff = np.array([])
+        pp = np.array([])
         id_mycatalog=self.env.tb_source.data['id_mycatalog'][0]
-        self.id_mycatalog = id_mycatalog
-        filename=mycatalog.filename(
-            id_mycatalog=id_mycatalog,
-            name='other_psd')
-
+        # self.id_mycatalog = id_mycatalog
+        # filename=mycatalog.filename(
+        #     id_mycatalog=id_mycatalog,
+        #     name='other_psd')
+        filename =Path(self.env.tb_source.data['path_fits'][0])
         print('Running read fits',filename)
-        from astropy.io import fits
-        import pandas
-        with fits.open(
-            #'/Users/dp275303/work/tessipack_developement_test/PSD_ _no_gap.fits'
-            filename
-            ) as data:
-            df = pandas.DataFrame(data[0].data)
+        if filename.is_file():
+            from astropy.io import fits
+            import pandas
+            with fits.open(
+                #'/Users/dp275303/work/tessipack_developement_test/PSD_ _no_gap.fits'
+                filename
+                ) as data:
+                df = pandas.DataFrame(data[0].data)
 
-        ff = df[0].values
-        pp = df[1].values
-        ff = ff.byteswap().newbyteorder()
-        pp = pp.byteswap().newbyteorder()
+            ff = df[0].values
+            pp = df[1].values
+            ff = ff.byteswap().newbyteorder()
+            pp = pp.byteswap().newbyteorder()
+        else:
+            print('File does not exist')
         return ff, pp
 
     def update_value(self):
@@ -740,31 +759,32 @@ class Interactive(Environment):
         if self.env.check_show_echelle.active[0]==0:
 
             ep = self.env.tb_echelle_diagram.data['image']*self.env.power_unit
-            lo, hi = np.nanpercentile(ep.value, [0.1, 99.9])
-            vlo, vhi = 0.3 * lo, 1.7 * hi
-            vstep = (lo - hi)/500
-            self.palette = getattr(bokeh.palettes, 
-                                self.env.select_color_palette.value)[9]
-            if self.env.check_reverse_color_palette.active[0]!=1:
-                self.palette = list(reversed(self.palette))
-            color_mapper = LogColorMapper(palette=self.palette, low=lo, high=hi)
-            self.env.fig_tpfint.select(
-                'img').glyph.color_mapper.low = color_mapper.low
-            self.env.fig_tpfint.select(
-                'img').glyph.color_mapper.high = color_mapper.high
-            self.env.fig_tpfint.select(
-                'img').glyph.color_mapper.palette = getattr(color_mapper,'palette')
-            self.env.stretch_sliderint.start = vlo
-            self.env.stretch_sliderint.end = vhi
-            self.env.stretch_sliderint.value = (lo, hi)
-            self.env.dnu_slider.start = 0.01
-            self.env.dnu_slider.end = self.env.maxdnu
-        if self.env.check_show_horizontal_lines.active[0]==0:
-            self.env.fig_other_periodogram.select('vertical_line').visible = True
-            self.env.fig_other_periodogram.select('vertical_inverted_line').visible = True
-        else:
-            self.env.fig_other_periodogram.select('vertical_line').visible = False
-            self.env.fig_other_periodogram.select('vertical_inverted_line').visible = False
+            if ep.value.any():
+                lo, hi = np.nanpercentile(ep.value, [0.1, 99.9])
+                vlo, vhi = 0.3 * lo, 1.7 * hi
+                vstep = (lo - hi)/500
+                self.palette = getattr(bokeh.palettes, 
+                                    self.env.select_color_palette.value)[9]
+                if self.env.check_reverse_color_palette.active[0]!=1:
+                    self.palette = list(reversed(self.palette))
+                color_mapper = LogColorMapper(palette=self.palette, low=lo, high=hi)
+                self.env.fig_tpfint.select(
+                    'img').glyph.color_mapper.low = color_mapper.low
+                self.env.fig_tpfint.select(
+                    'img').glyph.color_mapper.high = color_mapper.high
+                self.env.fig_tpfint.select(
+                    'img').glyph.color_mapper.palette = getattr(color_mapper,'palette')
+                self.env.stretch_sliderint.start = vlo
+                self.env.stretch_sliderint.end = vhi
+                self.env.stretch_sliderint.value = (lo, hi)
+                self.env.dnu_slider.start = 0.01
+                self.env.dnu_slider.end = self.env.maxdnu
+            if self.env.check_show_horizontal_lines.active[0]==0:
+                self.env.fig_other_periodogram.select('vertical_line').visible = True
+                self.env.fig_other_periodogram.select('vertical_inverted_line').visible = True
+            else:
+                self.env.fig_other_periodogram.select('vertical_line').visible = False
+                self.env.fig_other_periodogram.select('vertical_inverted_line').visible = False
 
         self.make_grid()
 
@@ -955,19 +975,28 @@ class Interactive(Environment):
         minf = int(self.env.minimum_frequency)
         maxf = int(self.env.maximum_frequency)
         data_frame = data_frame.query('freq<@maxf & freq>@minf')
+        if data_frame.empty:
+            ep=np.array([])
+            x_f=np.array([])
+            y_f=np.array([])
+            freq_values=np.array([])
+            power_values=np.array([])
+            y_original=np.array([])
+            xx=np.array([])
+            yy=np.array([])
+        else:    
+            ep, x_f, y_f, xx, yy, freq_values, power_values = self.apollinaire_echelle(
+                data_frame.freq.values,
+                data_frame.power.values,
+                deltanu.value
+            )
 
-        ep, x_f, y_f, xx, yy, freq_values, power_values = self.apollinaire_echelle(
-            data_frame.freq.values,
-            data_frame.power.values,
-            deltanu.value
-        )
-
-        y_original = y_f
-        mean_diff = np.mean(np.diff(y_f))
-        y_f_extra = y_f-(mean_diff/2)
-        val = y_f[-1]+(mean_diff/2)
-        center_y = np.append(y_f_extra, val)
-        y_f = center_y
+            y_original = y_f
+            mean_diff = np.mean(np.diff(y_f))
+            y_f_extra = y_f-(mean_diff/2)
+            val = y_f[-1]+(mean_diff/2)
+            center_y = np.append(y_f_extra, val)
+            y_f = center_y
 
         ep = ep*self.env.power_unit
         x_f = x_f*self.env.frequency_unit
@@ -1013,12 +1042,12 @@ class Interactive(Environment):
         value = float(self.env.inverted_slider.value)
         df_second['Frequency']=df_second['Frequency']+value
         old_data = ColumnDataSource(df_second.to_dict('list'))
-        self.inverted_slider_source.data=old_data.data
+        self.inverted_slider_source.data=dict(old_data.data)
 
 
     def _make_echelle_elements(self, deltanu, cmap='hot',
                                minimum_frequency=None, maximum_frequency=None, smooth_filter_width=None,
-                               scale='linear', plot_width=490, plot_height=340, title='Echelle'):
+                               scale='linear', width=490, height=340, title='Echelle'):
         """
         Helper function to make the elements of the echelle diagram for bokeh plotting.
         """
@@ -1029,7 +1058,7 @@ class Interactive(Environment):
         x_f = self.env.tb_echelle_diagram.data['x_f']*self.env.frequency_unit
         y_f = self.env.tb_echelle_diagram.data['y_f']*self.env.frequency_unit
 
-        fig = figure(plot_width=800, plot_height=800,
+        fig = figure(width=800, height=800,
                      # x_range=(0, 1), y_range=(y_f[0].value, y_f[-1].value),
                      title=title, tools='pan,box_zoom,reset,lasso_select',
                      toolbar_location="above",
@@ -1037,8 +1066,11 @@ class Interactive(Environment):
 
         fig.yaxis.axis_label = r'Frequency [{}]'.format(freq.unit.to_string())
         fig.xaxis.axis_label = r'Frequency / {:.3f} Mod. 1'.format(deltanu)
-
-        lo, hi = np.nanpercentile(ep.value, [0.1, 99.9])
+        if ep.value.any():
+            lo, hi = np.nanpercentile(ep.value, [0.1, 99.9])
+        else:
+            lo=10
+            hi=100
         vlo, vhi = 0.3 * lo, 1.7 * hi
         vstep = (lo - hi)/500
         color_mapper = LogColorMapper(palette=self.palette, low=lo, high=hi)
@@ -1051,16 +1083,26 @@ class Interactive(Environment):
                   color_mapper=color_mapper,
                   name='img',
                   source=self.env.tb_echelle_diagram)
-
+        # from bokeh.models import Div
+        # style = Div(
+        #     text="""
+        # <style>
+        #     .custom-slider .bk-input-group {
+        #         height:300px;
+        #     }
+        # </style>
+        # """
+        # )
         stretch_slider = RangeSlider(start=vlo,
                                      end=vhi,
                                      step=vstep,
                                      title='',
                                      value=(lo, hi),
-                                     orientation='vertical',
-                                     width=10,
-                                     height=230,
+                                    #  orientation='vertical',
+                                     width=200,
+                                     height=10,
                                      direction='rtl',
+                                    # css_classes=["custom- slider"],
                                      show_value=False,
                                      sizing_mode='fixed',
                                      name='stretch')
@@ -1105,18 +1147,18 @@ class Interactive(Environment):
         #               "you can install bokeh using e.g. `conda install bokeh`.")
         #     return None
 
-        maximum_frequency = kwargs.pop(
-            'maximum_frequency', self.periodogram.frequency.max().value)
-        minimum_frequency = kwargs.pop(
-            'minimum_frequency', self.periodogram.frequency. min().value)
+        # maximum_frequency = kwargs.pop(
+        #     'maximum_frequency', self.periodogram.frequency.max().value)
+        # minimum_frequency = kwargs.pop(
+        #     'minimum_frequency', self.periodogram.frequency. min().value)
 
         dnu = SeismologyQuantity(quantity=self.env.dnu_val*u.microhertz,
                                  name='deltanu', method='echelle')
 
         def create_interact_ui():
             self.env.fig_tpfint, self.env.stretch_sliderint = self._make_echelle_elements(deltanu=dnu,
-                                                                                          maximum_frequency=maximum_frequency,
-                                                                                          minimum_frequency=minimum_frequency,
+                                                                                        #   maximum_frequency=maximum_frequency,
+                                                                                        #   minimum_frequency=minimum_frequency,
                                                                                           **kwargs)
             # maxdnu = self.periodogram.frequency.max().value/5
             maxdnu = self.env.maxdnu
@@ -1371,14 +1413,14 @@ class Interactive(Environment):
 
         old_data = ColumnDataSource(
             data=dict(Slicefreq=[], Frequency=[], Power=[],Mode=[], xx=[]))
-        self.tb_se_first_source.data = old_data.data
+        self.tb_se_first_source.data = dict(old_data.data)
 
     def clear_se_table2(self):
         '''This function clear table1 of the program'''
 
         old_data = ColumnDataSource(
             data=dict(Slicefreq=[], Frequency=[], Power=[],Mode=[], xx=[]))
-        self.tb_se_second_source.data = old_data.data
+        self.tb_se_second_source.data = dict(old_data.data)
 
     def find_peak_frequencies(self):
         '''
@@ -1490,7 +1532,7 @@ class Interactive(Environment):
                             xx = df['xx'].to_list()
                             ))
 
-        self.tb_se_first_source.data = old_data.data
+        self.tb_se_first_source.data = dict(old_data.data)
 
 
 
@@ -1626,7 +1668,7 @@ class Interactive(Environment):
 
         df_grid.loc[ind,'Mode'] = self.env.select_mode_menu.value
         old_data = ColumnDataSource(df_grid.to_dict('list'))
-        self.env.tb_grid_source.data = old_data.data
+        self.env.tb_grid_source.data = dict(old_data.data)
 
         #ind = self.env.tb_other_periodogram.selected.indices
 
@@ -1638,7 +1680,7 @@ class Interactive(Environment):
         df_other.loc[ind,'Mode'] = self.env.select_mode_menu.value
         print('df_other',df_other.loc[ind])
         old_data = ColumnDataSource(df_other.to_dict('list'))
-        self.env.tb_other_periodogram.data = old_data.data
+        self.env.tb_other_periodogram.data = dict(old_data.data)
         self.selection_table_to_prd_fig(0,0,0)
         self.selection_prd_to_grid_fig(0,0,0)
         self.clear_se_table1()
@@ -1667,7 +1709,7 @@ class Interactive(Environment):
         df_table1_left = df_table1.query('Mode != @mode')
         print(df_table1_left.to_dict('list'))
         old_data = ColumnDataSource(df_table1_left.to_dict('list'))
-        self.tb_se_first_source.data = old_data.data
+        self.tb_se_first_source.data = dict(old_data.data)
         # Second table
         df_table2 = self.tb_se_second_source.to_df()
         #df_table1_se = df_table1.query('Mode == @mode')
@@ -1676,7 +1718,7 @@ class Interactive(Environment):
         #all_data['mode_color']= self.assign_mode_color(all_data.Mode.values)
         #df_table2
         old_data = ColumnDataSource(all_data.to_dict('list'))
-        self.tb_se_second_source.data = old_data.data
+        self.tb_se_second_source.data = dict(old_data.data)
 
     def click_move_se_2_1_button(self):
         """
@@ -1695,7 +1737,7 @@ class Interactive(Environment):
         # print(df_table2_left.to_dict('list'))
 
         old_data = ColumnDataSource(df_table2_left.to_dict('list'))
-        self.tb_se_second_source.data = old_data.data
+        self.tb_se_second_source.data = dict(old_data.data)
         # Second table
         df_table1 = self.tb_se_first_source.to_df()
         #df_table1_se = df_table1.query('Mode == @mode')
@@ -1720,7 +1762,7 @@ class Interactive(Environment):
         #df_table2
         print(all_data.to_dict('list'))
         old_data = ColumnDataSource(all_data.to_dict('list'))
-        self.tb_se_first_source.data = old_data.data
+        self.tb_se_first_source.data = dict(old_data.data)
 
         #self.selection_table_to_prd_fig(0,0,0)
         #self.selection_prd_to_grid_fig(0,0,0)
@@ -1740,44 +1782,49 @@ class Interactive(Environment):
     def trim_frequency(self):
 
         ff, pp = self.read_fits_get_fp()
-        #mm = ['999']*(len(pp))
-        
         min_freq = int(self.env.minimum_frequency)*self.env.frequency_unit
         max_freq = int(self.env.maximum_frequency)*self.env.frequency_unit
-        #print('minimum',min_freq,ff)
-        # ff = ff[(ff <= max_freq)]
-        # pp = pp[(ff <= max_freq)]
-        # print('maximum',max_freq,ff)
 
         ff = (ff*u.Hz).to(self.env.frequency_unit).value
         pp = pp*self.env.power_unit
         pp = pp.value
         
-        #print('F and P with unit',ff, pp)
-        
         ind=(ff <= max_freq.value) & (ff >= min_freq.value)
 
         f = ff[ind]
         p = pp[ind]
-        f = f*self.env.frequency_unit
-        p = p*self.env.power_unit
-        mm = ['999']*(len(p))
+        if f.any():
+            f = f*self.env.frequency_unit
+            p = p*self.env.power_unit
+            mm = ['999']*(len(p))
 
-        #self.env.minimum_frequency = f.min().value
-        #self.env.maximum_frequency = f.max().value
+            #self.env.minimum_frequency = f.min().value
+            #self.env.maximum_frequency = f.max().value
 
-        #print(f,p)
-        period = lk_prd_module.Periodogram(f, p)
-        self.periodogram = period
+            #print(f,p)
+            period = lk_prd_module.Periodogram(f, p)
+            self.periodogram = period
 
-        old_data= ColumnDataSource(
-            data=dict(
-                frequency=list(self.periodogram.frequency.value),
-                power=list(self.periodogram.power.value),
-                Mode = mm,
-                # cuttoff=list(np.array([0])),
-            ))  
-        self.env.tb_other_periodogram.data=old_data.data
+            old_data= ColumnDataSource(
+                data=dict(
+                    frequency=list(self.periodogram.frequency.value),
+                    power=list(self.periodogram.power.value),
+                    Mode = mm,
+                    # cuttoff=list(np.array([0])),
+                ))  
+            self.env.tb_other_periodogram.data=dict(old_data.data)
+        else:
+            old_data= ColumnDataSource(
+                data=dict(
+                    frequency=list([]),
+                    power=list([]),
+                    Mode = list([]),
+                    # cuttoff=list(np.array([0])),
+                ))
+             
+            self.env.tb_other_periodogram.data=dict(old_data.data)
+             
+
 
     def save_table_2(self):
 
@@ -1801,7 +1848,7 @@ class Interactive(Environment):
         print('Loaded values',df)    
         old_data = ColumnDataSource(df.to_dict('list'))
 
-        self.tb_se_second_source.data = old_data.data
+        self.tb_se_second_source.data = dict(old_data.data)
         print('Load saved Table 2 values',
               filename,
               self.tb_se_second_source.data)
@@ -1825,7 +1872,7 @@ class Interactive(Environment):
 
             df_grid.loc[ind,'Mode'] = str(mode)
             old_data = ColumnDataSource(df_grid.to_dict('list'))
-            self.env.tb_grid_source.data = old_data.data
+            self.env.tb_grid_source.data = dict(old_data.data)
 
             #ind = self.env.tb_other_periodogram.selected.indices
 
@@ -1836,7 +1883,7 @@ class Interactive(Environment):
 
             df_other.loc[ind,'Mode'] = str(mode)
             old_data = ColumnDataSource(df_other.to_dict('list'))
-            self.env.tb_other_periodogram.data = old_data.data
+            self.env.tb_other_periodogram.data = dict(old_data.data)
         
 
     def apply_modes(self,table):
@@ -1856,7 +1903,7 @@ class Interactive(Environment):
 
             df_grid.loc[ind,'Mode'] = str(mode)
             old_data = ColumnDataSource(df_grid.to_dict('list'))
-            self.env.tb_grid_source.data = old_data.data
+            self.env.tb_grid_source.data = dict(old_data.data)
 
             #ind = self.env.tb_other_periodogram.selected.indices
 
@@ -1867,5 +1914,5 @@ class Interactive(Environment):
 
             df_other.loc[ind,'Mode'] = str(mode)
             old_data = ColumnDataSource(df_other.to_dict('list'))
-            self.env.tb_other_periodogram.data = old_data.data
+            self.env.tb_other_periodogram.data = dict(old_data.data)
         
