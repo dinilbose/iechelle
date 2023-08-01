@@ -1,6 +1,5 @@
 """Defines the Seismology class."""
 import logging
-import warnings
 import pandas as pd
 from pathlib import Path
 import numpy as np
@@ -20,7 +19,7 @@ from lightkurve.seismology import SeismologyQuantity
 # from astropy import units
 # from tessipack.functions import maths
 # from tessipack.functions import io
-from iechelle import mycatalog
+#from iechelle import mycatalog
 
 #import lightkurve
 #import Periodo
@@ -89,7 +88,7 @@ class Interactive(Environment):
         self.env.dnu_text = TextInput(
             value=str(self.env.dnu_val), title="Delta Nu", width=100)
         self.env.update_int_button = Button(
-            label="Update Plot", button_type="success", width=150)
+            label="Update Plot", button_type=self.env.button_type, width=150)
         self.env.update_int_button.on_click(self.update_value)
         
         self.env.select_mode_menu = Select(title='Mode Select', 
@@ -97,26 +96,26 @@ class Interactive(Environment):
                                          value='999',width=150)
         self.env.mode_apply_button = Button(
                                         label="Select Mode", 
-                                        button_type="success", width=150)
+                                        button_type=self.env.button_type, width=150)
         self.env.mode_apply_button.on_click(self.click_mode_apply_button)
 
         self.env.move_se_1_2_button = Button(
                                         label="Move Tab1 -> Tab2", 
-                                        button_type="success", width=150)
+                                        button_type=self.env.button_type, width=150)
         self.env.move_se_1_2_button.on_click(self.click_move_se_1_2_button)
         self.env.move_se_2_1_button = Button(
                                         label="Move Tab2 -> Tab1", 
-                                        button_type="success", width=150)
+                                        button_type=self.env.button_type, width=150)
         self.env.move_se_2_1_button.on_click(self.click_move_se_2_1_button)
 
         self.env.save_table_2_button = Button(
                                         label="Save Tab2", 
-                                        button_type="success", width=150)
+                                        button_type=self.env.button_type, width=150)
         self.env.save_table_2_button.on_click(self.save_table_2)
 
         self.env.load_table_2_button = Button(
                                         label="Load Values", 
-                                        button_type="success", width=150)
+                                        button_type=self.env.button_type, width=150)
         self.env.load_table_2_button.on_click(self.load_table)
 
         self.env.grid_circle_size = TextInput(
@@ -127,7 +126,11 @@ class Interactive(Environment):
                                          options=self.env.color_palette_options, 
                                          value=self.env.default_color_palette,
                                          width=150)
-        self.palette = getattr(bokeh.palettes, self.env.default_color_palette)[9]
+        pal=getattr(bokeh.palettes, self.env.default_color_palette)
+        if type(pal)==dict:
+            self.palette = pal[9]
+        else:
+            self.palette = pal       
         self.env.check_reverse_color_palette = CheckboxGroup(
                                                             labels=['Reverse'],
                                                             active=[1],
@@ -169,23 +172,23 @@ class Interactive(Environment):
         self.make_grid()
 
         self.env.test_button = Button(
-            label="Get Selection", button_type="success", width=150)
+            label="Get Selection", button_type=self.env.button_type, width=150)
         self.env.test_button.on_click(self.get_all_selection_button)
         
         self.env.clear_se_grid_prd_button = Button(
-            label="Clear Selection", button_type="success", width=150)
+            label="Clear Selection", button_type=self.env.button_type, width=150)
         self.env.clear_se_grid_prd_button.on_click(self.clear_se_grid_prd)
 
         self.env.clear_se_table1_button = Button(
-            label="Clear Table 1", button_type="success", width=150)
+            label="Clear Table 1", button_type=self.env.button_type, width=150)
         self.env.clear_se_table1_button.on_click(self.clear_se_table1)
 
         self.env.clear_se_table2_button = Button(
-            label="Clear Table 1", button_type="success", width=150)
+            label="Clear Table 1", button_type=self.env.button_type, width=150)
         self.env.clear_se_table2_button.on_click(self.clear_se_table2)
 
         self.env.find_peaks_button = Button(
-            label="Find Peak", button_type="success", width=150)
+            label="Find Peak", button_type=self.env.button_type, width=150)
         self.env.find_peaks_button.on_click(self.find_peak_frequencies)
         #self.update_selection_tables()
         
@@ -663,7 +666,6 @@ class Interactive(Environment):
             )
             self.env.tb_grid_source.data = dict(old_data.data)
 
-
     def read_fits_get_fp(self):
         '''
         Test function: Read fits file and get f and p"
@@ -763,8 +765,15 @@ class Interactive(Environment):
                 lo, hi = np.nanpercentile(ep.value, [0.1, 99.9])
                 vlo, vhi = 0.3 * lo, 1.7 * hi
                 vstep = (lo - hi)/500
-                self.palette = getattr(bokeh.palettes, 
-                                    self.env.select_color_palette.value)[9]
+                # self.palette = getattr(bokeh.palettes, 
+                #                     self.env.select_color_palette.value)[9]
+                
+                pal=getattr(bokeh.palettes, self.env.select_color_palette.value)
+                if type(pal)==dict:
+                    self.palette = pal[9]
+                else:
+                    self.palette = pal  
+                
                 if self.env.check_reverse_color_palette.active[0]!=1:
                     self.palette = list(reversed(self.palette))
                 color_mapper = LogColorMapper(palette=self.palette, low=lo, high=hi)
@@ -1099,12 +1108,12 @@ class Interactive(Environment):
                                      title='',
                                      value=(lo, hi),
                                     #  orientation='vertical',
-                                     width=200,
-                                     height=10,
-                                     direction='rtl',
+                                    # width=200,
+                                    # height=10,
+                                     direction='ltr',
                                     # css_classes=["custom- slider"],
-                                     show_value=False,
-                                     sizing_mode='fixed',
+                                     show_value=True,
+                                     #sizing_mode='fixed',
                                      name='stretch')
 
         def stretch_change_callback(attr, old, new):
@@ -1170,13 +1179,13 @@ class Interactive(Environment):
                                          title="Delta Nu",
                                          width=290)
             self.env.r_button = Button(
-                label=">", button_type="default", width=30)
+                label=">", button_type=self.env.button_type, width=30)
             self.env.l_button = Button(
-                label="<", button_type="default", width=30)
+                label="<", button_type=self.env.button_type, width=30)
             self.env.rr_button = Button(
-                label=">>", button_type="default", width=30)
+                label=">>", button_type=self.env.button_type, width=30)
             self.env.ll_button = Button(
-                label="<<", button_type="default", width=30)
+                label="<<", button_type=self.env.button_type, width=30)
 
             def update(attr, old, new):
                 """Callback to take action when dnu slider changes"""

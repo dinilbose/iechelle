@@ -1,4 +1,3 @@
-from iechelle import mycatalog
 from env import Environment
 import numpy as np
 from bokeh.models import ColumnDataSource
@@ -6,18 +5,12 @@ from bokeh.models import CustomJS, TextInput, Paragraph,PreText
 from bokeh.models import Button, Select, RadioGroup  # for saving data
 from bokeh.plotting import figure
 import pandas as pd
-
 from tkinter import Tk
 from tkinter.filedialog import askdirectory, askopenfile
-
-
 import ast
 from astropy.coordinates import SkyCoord
 from astropy import units as unit
-# from tessipack import eleanor
 import os
-from iechelle import utils
-# from tessipack.functions import aperture
 
 from pathlib import Path
 from bokeh.layouts import row,column
@@ -35,17 +28,17 @@ class Catalog(Environment):
         # self.env.text_cluster_query= TextInput(value=self.env.default_cluster, title="Select Cluster")
         # self.env.text_cluster_query = Select(title='Cluster', options=all_clusters, value=all_clusters[0])
 
-        # self.env.update_cluster_button = Button(label="Update cluster", button_type="success",width=150)
+        # self.env.update_cluster_button = Button(label="Update cluster", button_type=self.env.button_type,width=150)
         # self.env.update_cluster_button.on_click(self.update_cluster)
 
 
         self.env.text_catalog_query= TextInput(value='', title="Catalog query")
-        self.env.update_catalog_button = Button(label="Update catalog", button_type="success",width=150)
+        self.env.update_catalog_button = Button(label="Update catalog", button_type=self.env.button_type,width=150)
         # self.env.update_catalog_button.on_click(self.update_catalog)
 
-        # self.env.update_id_mycatalog_button = Button(label="Update id_mycatalog", button_type="success",width=150)
+        # self.env.update_id_mycatalog_button = Button(label="Update id_mycatalog", button_type=self.env.button_type,width=150)
         # self.env.update_id_mycatalog_button.on_click(self.update_id_mycatalog)
-        # self.env.update_id_button = Button(label="Update id", button_type="success",width=150)
+        # self.env.update_id_button = Button(label="Update id", button_type=self.env.button_type,width=150)
         # self.env.update_id_button.on_click(self.update_id)
 
 
@@ -90,11 +83,11 @@ class Catalog(Environment):
         # self.env.text_banner_dmin= Paragraph(text='', width=1000, height=10)
 
 
-        self.env.next_button = Button(label="Next Source", button_type="success",width=150)
+        self.env.next_button = Button(label="Next Source", button_type=self.env.button_type,width=150)
         self.env.next_button.on_click(self.next)
-        self.env.previous_button = Button(label="Previous Source", button_type="success",width=150)
+        self.env.previous_button = Button(label="Previous Source", button_type=self.env.button_type,width=150)
         self.env.previous_button.on_click(self.previous)
-        # self.env.save_userinput_button = Button(label="Save User Input", button_type="success",width=100)
+        # self.env.save_userinput_button = Button(label="Save User Input", button_type=self.env.button_type,width=100)
         # self.env.save_userinput_button.on_click(self.save_userinput)
         #self.env.text_banner = Paragraph(text=self.env.Message, width=1100, height=30)
 

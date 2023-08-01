@@ -320,12 +320,19 @@ class Environment(object):
         "Magma", 
         "Inferno", 
         "Viridis",
-        "Cividis"
+        "Cividis",
+        "Greys256",
+        "Inferno256",
+        "Magma256",
+        "Plasma256",
+        "Viridis256",
+        "Cividis256",
+        "Turbo256",
     ]
 
 
     # New buttons catalog
-
+    button_type = "primary"
     selected_filename_text = None
     open_folder_button = None
     open_file_button = None
