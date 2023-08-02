@@ -105,8 +105,10 @@ class Catalog(Environment):
     def select_folder(self):
         root = Tk()
         root.attributes('-topmost', True)
-        root.withdraw()
+        # root.withdraw()
         dirname = askdirectory()  # blocking
+        
+        root.lift()
         if dirname:
             self.env.selected_filename_text.text = dirname
 
