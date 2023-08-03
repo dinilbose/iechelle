@@ -15,6 +15,7 @@ from astropy import units as u
 # from lightkurve.periodogram import SNRPeriodogram
 # from lightkurve.utils import LightkurveWarning
 from lightkurve.seismology import SeismologyQuantity
+import apollinaire as apol
 
 # from astropy import units
 # from tessipack.functions import maths
@@ -46,6 +47,9 @@ import bokeh.palettes
 
 log = logging.getLogger(__name__)
 
+from tkinter import Tk
+from tkinter.filedialog import askdirectory, askopenfile, asksaveasfilename
+    
 
 class Interactive(Environment):
     env = Environment
@@ -114,9 +118,20 @@ class Interactive(Environment):
         self.env.save_table_2_button.on_click(self.save_table_2)
 
         self.env.load_table_2_button = Button(
-                                        label="Load Values", 
+                                        label="Load from default file", 
                                         button_type=self.env.button_type, width=150)
-        self.env.load_table_2_button.on_click(self.load_table)
+        self.env.load_table_2_button.on_click(self.load_table_2)
+
+
+        self.env.save_as_table_2_button = Button(
+                                        label="Save Tab 2 as", 
+                                        button_type=self.env.button_type, width=150)
+        self.env.save_as_table_2_button.on_click(self.save_as_table_2)
+
+        self.env.load_from_specific_file_table_2_button  = Button(
+                                        label="Load from specific file", 
+                                        button_type=self.env.button_type, width=150)
+        self.env.load_from_specific_file_table_2_button.on_click(self.load_from_file)
 
         self.env.grid_circle_size = TextInput(
             value=str(2), title="Circle Size", width=80)
@@ -190,6 +205,9 @@ class Interactive(Environment):
         self.env.find_peaks_button = Button(
             label="Find Peak", button_type=self.env.button_type, width=150)
         self.env.find_peaks_button.on_click(self.find_peak_frequencies)
+
+
+
         #self.update_selection_tables()
         
         # self.env.tb_source.data.on_change('indices',self.update_source)
@@ -716,7 +734,7 @@ class Interactive(Environment):
         #self.env.fig_other_periodogram.x_range.end = int(self.env.maximum_frequency)
         start = int(self.env.minimum_frequency)
         end = int(self.env.maximum_frequency)
-       
+
         #self.env.fig_other_periodogram.x_range=(start, end)
         #print(self.env.fig_other_periodogram.x_range.end)
 
@@ -1640,13 +1658,25 @@ class Interactive(Environment):
         # self.selection_grid_to_table_fig(0,0,0)
         # self.selection_table_to_prd_fig(0,0,0)
         # self.selection_prd_to_grid_fig(0,0,0)
-        self.selection_grid_to_table_fig(0,0,0)
-        self.selection_table_to_prd_fig(0,0,0)
-        self.selection_prd_to_grid_fig(0,0,0)
+        # self.selection_grid_to_table_fig(0,0,0)
+        # self.selection_table_to_prd_fig(0,0,0)
+        # self.selection_prd_to_grid_fig(0,0,0)
         
-        self.selection_grid_to_table_fig(0,0,0)
-        self.selection_table_to_prd_fig(0,0,0)
+        # self.selection_grid_to_table_fig(0,0,0)
+        # self.selection_table_to_prd_fig(0,0,0)
+        # self.selection_prd_to_grid_fig(0,0,0)
+
+        # #Ideal Way
+        # self.selection_grid_to_table_fig(0,0,0)
+        # self.selection_prd_to_table_fig(0,0,0)
+        # self.selection_table_to_grid_fig(0,0,0)
+        # self.selection_table_to_prd_fig(0,0,0)
+
+        self.selection_grid_to_prd_fig(0,0,0)
         self.selection_prd_to_grid_fig(0,0,0)
+        self.selection_grid_to_table_fig(0,0,0)
+
+
 
     def clear_se_grid_prd(self):
         """
@@ -1838,61 +1868,163 @@ class Interactive(Environment):
     def save_table_2(self):
 
         df=self.tb_se_second_source.to_df()
-        filename=mycatalog.filename(
-            id_mycatalog=self.id_mycatalog,
-            name='other_psd_save_freq')
+        id=self.env.tb_source.data['id'][0]
+        data_folder = self.env.tb_source.data['data_folder'][id]
+        id_mycatalog=self.env.tb_source.data['id_mycatalog_all'][id]
+        file_name=data_folder+'/'+'modes_parameter_selected.csv'
+        df.to_csv(file_name,index=False)
         
-        print('Save Table 2 values',filename,self.tb_se_second_source.data)
+        df_pkb=pd.DataFrame(columns=[self.env.pkb_columns])
+        df_pkb['nu']=df['Frequency'].to_list()
+        df_pkb['h']=df['Power'].to_list()
+        df_pkb['l']=df['Mode'].astype(float).to_list()
+        df_pkb =df_pkb.fillna(0)
+        pkb_array=df_pkb.values
+        file_name=data_folder+'/'+'modes_parameter_selected.pkb'
 
-        df.to_csv(filename,index=False)
+        apol.peakbagging.save_pkb(file_name,pkb_array)
+        print('PKB file saved to ',file_name)
+
+
+    def load_pkb_to_second_tab(self,file_name):
+        "Loads pkb and return df for second tab"
+        pkb_array = apol.peakbagging.fit_tools.read_pkb(file_name)
+        df_pkb = pd.DataFrame(pkb_array,columns=self.env.pkb_columns)
+        df_pkb['nu'] = df_pkb['nu'].astype(float).round(4)
+
+        df_grid = self.env.tb_grid_source.to_df()
+        df_grid['freq_values'] = df_grid['freq_values'].round(self.env.freq_round)
+
+        def find_nearest_value(x):
+            return df_grid['freq_values'].iloc[(df_grid['freq_values'] - x).abs().idxmin()]
         
-    def load_table(self):
+        df_pkb['closest_frequency'] = df_pkb['nu'].apply(find_nearest_value)
+        df_pkb_merged = df_pkb.merge(df_grid,left_on='closest_frequency', right_on='freq_values', how='left')
+        df_pkb_merged['freq_diff']= abs(df_pkb_merged.nu - df_pkb_merged.closest_frequency)
+        df_pkb_merged['Mode']=df_pkb_merged['l'].astype(int)
+        df_pkb_merged['Mode']=df_pkb_merged['Mode'].astype(str)
+        print(df_pkb_merged)
+        if not df_pkb_merged.query('freq_diff>1').empty:
 
-        filename=mycatalog.filename(
-            id_mycatalog=self.id_mycatalog,
-            name='other_psd_save_freq')
-        df = pd.read_csv(filename)
-        df['Mode']=df['Mode'].astype(str)
-        df['Frequency']=df['Frequency'].astype(float)
-        print('Loaded values',df)    
-        old_data = ColumnDataSource(df.to_dict('list'))
+            print('Warning frequency with greater than difference 1 is present, change frequency limit')
+        df_pkb=df_pkb_merged.query('freq_diff<1')
+        df_pkb.rename(columns={'yy':'Slicefreq', 
+                       'freq_values':'Frequency',
+                       'power_values':'Power'},
+                       inplace=True,)
+        df_pkb = df_pkb[['Slicefreq', 'Frequency', 'Power', 'Mode','xx']]
 
+        return df_pkb
+
+    def load_table_2(self):
+
+        id=self.env.tb_source.data['id'][0]
+        data_folder = self.env.tb_source.data['data_folder'][id]
+        id_mycatalog = self.env.tb_source.data['id_mycatalog_all'][id]
+        file_name = data_folder+'/'+'modes_param.pkb'
+
+
+
+        df=self.load_pkb_to_second_tab(file_name)
+
+        old_data = ColumnDataSource(
+                    data=dict(Slicefreq = df['Slicefreq'].to_list(), 
+                            Frequency = df['Frequency'].to_list(), 
+                            Power = df['Power'].to_list(),
+                            Mode = df['Mode'].to_list(),
+                            xx = df['xx'].to_list()
+                            ))
         self.tb_se_second_source.data = dict(old_data.data)
-        print('Load saved Table 2 values',
-              filename,
-              self.tb_se_second_source.data)
+        self.apply_modes(df)
+        print('Loaded', file_name)
 
-        #df['Freq']
+
+
+
+        # closest_frequency=df_pkb['closest_frequency'].to_list()
+        # print(closest_frequency)
+        # df_grid_selected = df_grid.query('freq_values==@closest_frequency')
+        # df_pkb['yy'] = df_grid_selected['yy'].to_list()
+        # df_pkb['xx'] = df_grid_selected['xx'].to_list()
+        # print('selected PKB', df_pkb)
+
+
+
+        # df_pkb['nu'] = df_pkb['nu'].astype(str)
+        # merged_df = df_grid.merge(df_pkb, left_on='freq_values', right_on='closest_frequency', how='left')
+        # merged_df['Mode'] = merged_df['l'].combine_first(merged_df['Mode'])
+        # df_grid = merged_df[df_grid_col]
+        # self.env.tb_grid_source.data = df_grid.to_dict('list')
+        # df_grid.rename(columns={'yy':'Slicefreq', 
+        #                'freq_values':'Frequency',
+        #                'power_values':'Power'},
+        #                inplace=True,)
+        # df_grid = df_grid[['Slicefreq', 'Frequency', 'Power', 'Mode','xx']]
+
+        # val='999'
+        # df = df_grid.query('Mode!=@val')
+        # print(df)
+        # old_data = ColumnDataSource(
+        #             data=dict(Slicefreq = df['Slicefreq'].to_list(), 
+        #                     Frequency = df['Frequency'].to_list(), 
+        #                     Power = df['Power'].to_list(),
+        #                     Mode = df['Mode'].to_list(),
+        #                     xx = df['xx'].to_list()
+        #                     ))
+
+        # self.tb_se_second_source.data = dict(old_data.data)
+
+
+        # filename=mycatalog.filename(
+        #     id_mycatalog=self.id_mycatalog,
+        #     name='other_psd_save_freq')
+        # df = pd.read_csv(filename)
+        # df['Mode']=df['Mode'].astype(str)
+        # df['Frequency']=df['Frequency'].astype(float)
+        # print('Loaded values',df)    
         
-        df_second=self.tb_se_second_source.to_df()
-        df_second['Frequency']=df_second['Frequency'].round(
-            self.env.freq_round)
-        list_freq = df_second['Frequency'].to_list()
 
-        for mode in df_second.Mode.unique():
-            print('Applying', mode,df_second.Mode.unique())
-            list_freq = df_second.query(
-                    'Mode==@mode')['Frequency'].to_list()
+        
+        
+        # old_data = ColumnDataSource(df.to_dict('list'))
+        # self.tb_se_second_source.data = dict(old_data.data)
+        # print('Load saved Table 2 values',
+        #       filename,
+        #       self.tb_se_second_source.data)
+        # df_second=self.tb_se_second_source.to_df()
+        # self.apply_modes(df_second)
+
+
+
+
+        # df_second['Frequency']=df_second['Frequency'].round(
+        #     self.env.freq_round)
+        # list_freq = df_second['Frequency'].to_list()
+
+        # for mode in df_second.Mode.unique():
+        #     print('Applying', mode,df_second.Mode.unique())
+        #     list_freq = df_second.query(
+        #             'Mode==@mode')['Frequency'].to_list()
             
-            df_grid = self.env.tb_grid_source.to_df()
-            df_grid['freq_values'] = df_grid['freq_values'].round(
-                self.env.freq_round)
-            ind = df_grid.query('freq_values == @list_freq').index
+        #     df_grid = self.env.tb_grid_source.to_df()
+        #     df_grid['freq_values'] = df_grid['freq_values'].round(
+        #         self.env.freq_round)
+        #     ind = df_grid.query('freq_values == @list_freq').index
 
-            df_grid.loc[ind,'Mode'] = str(mode)
-            old_data = ColumnDataSource(df_grid.to_dict('list'))
-            self.env.tb_grid_source.data = dict(old_data.data)
+        #     df_grid.loc[ind,'Mode'] = str(mode)
+        #     old_data = ColumnDataSource(df_grid.to_dict('list'))
+        #     self.env.tb_grid_source.data = dict(old_data.data)
 
-            #ind = self.env.tb_other_periodogram.selected.indices
+        #     #ind = self.env.tb_other_periodogram.selected.indices
 
-            df_other = self.env.tb_other_periodogram.to_df()
-            df_other['frequency'] = df_other['frequency'].round(
-                self.env.freq_round)
-            ind = df_other.query('frequency == @list_freq').index
+        #     df_other = self.env.tb_other_periodogram.to_df()
+        #     df_other['frequency'] = df_other['frequency'].round(
+        #         self.env.freq_round)
+        #     ind = df_other.query('frequency == @list_freq').index
 
-            df_other.loc[ind,'Mode'] = str(mode)
-            old_data = ColumnDataSource(df_other.to_dict('list'))
-            self.env.tb_other_periodogram.data = dict(old_data.data)
+        #     df_other.loc[ind,'Mode'] = str(mode)
+        #     old_data = ColumnDataSource(df_other.to_dict('list'))
+        #     self.env.tb_other_periodogram.data = dict(old_data.data)
         
 
     def apply_modes(self,table):
@@ -1924,4 +2056,53 @@ class Interactive(Environment):
             df_other.loc[ind,'Mode'] = str(mode)
             old_data = ColumnDataSource(df_other.to_dict('list'))
             self.env.tb_other_periodogram.data = dict(old_data.data)
-        
+
+
+    def load_from_file(self):
+        root = Tk()
+        root.attributes('-topmost', True)
+        root.withdraw()
+        file_name = askopenfile()  # blocking
+        if file_name:
+
+            id=self.env.tb_source.data['id'][0]
+            data_folder = self.env.tb_source.data['data_folder'][id]
+            id_mycatalog = self.env.tb_source.data['id_mycatalog_all'][id]
+
+            df=self.load_pkb_to_second_tab(file_name)
+
+            old_data = ColumnDataSource(
+                        data=dict(Slicefreq = df['Slicefreq'].to_list(), 
+                                Frequency = df['Frequency'].to_list(), 
+                                Power = df['Power'].to_list(),
+                                Mode = df['Mode'].to_list(),
+                                xx = df['xx'].to_list()
+                                ))
+            self.tb_se_second_source.data = dict(old_data.data)
+            self.apply_modes(df)
+            print('Loaded', file_name)
+
+
+    def save_as_table_2(self):
+        print('Load from file')
+        root = Tk()
+        root.attributes('-topmost', True)
+        root.withdraw()
+        filename = asksaveasfilename(defaultextension=".pkb") 
+        if filename:
+            print(filename)
+            df=self.tb_se_second_source.to_df()
+            id=self.env.tb_source.data['id'][0]
+            data_folder = self.env.tb_source.data['data_folder'][id]
+            file_name=filename
+
+            
+            df_pkb=pd.DataFrame(columns=[self.env.pkb_columns])
+            df_pkb['nu']=df['Frequency'].to_list()
+            df_pkb['h']=df['Power'].to_list()
+            df_pkb['l']=df['Mode'].astype(float).to_list()
+            df_pkb =df_pkb.fillna(0)
+            pkb_array=df_pkb.values
+
+            apol.peakbagging.save_pkb(file_name,pkb_array)
+            print('PKB file saved to ',file_name)

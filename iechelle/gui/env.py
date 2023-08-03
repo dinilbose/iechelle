@@ -329,6 +329,7 @@ class Environment(object):
         "Cividis256",
         "Turbo256",
     ]
+    pkb_columns=['n', 'l', 'nu', 'e_nu', 'h', 'e_h', 'w', 'e_w', 'a', 'e_a', 's', 'e_s', 'asym', 'e_asym']
 
 
     # New buttons catalog
@@ -336,6 +337,9 @@ class Environment(object):
     selected_filename_text = None
     open_folder_button = None
     open_file_button = None
+    save_as_table_2_button = None
+    load_from_file_table_2_button = None
+
     # selected_filename = None
     # selected_filename = None
 

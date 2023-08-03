@@ -133,7 +133,7 @@ class Catalog(Environment):
                                         path_fits=path_fits,
                                         id=list([id]),
                                         id_mycatalog=list(self.id_mycatalog),
-                                        data_folder=list([]),
+                                        data_folder=list([str(Path(file_name).parent)]),
                                         ))
             
             self.env.tb_source.data = dict(new_data.data)
