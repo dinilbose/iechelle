@@ -199,7 +199,7 @@ class Interactive(Environment):
         self.env.clear_se_table1_button.on_click(self.clear_se_table1)
 
         self.env.clear_se_table2_button = Button(
-            label="Clear Table 1", button_type=self.env.button_type, width=150)
+            label="Clear Table 2", button_type=self.env.button_type, width=150)
         self.env.clear_se_table2_button.on_click(self.clear_se_table2)
 
         self.env.find_peaks_button = Button(
