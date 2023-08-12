@@ -1047,17 +1047,32 @@ class Interactive(Environment):
 
 
             df_second=self.tb_se_second_source.to_df()
-            df_second=df_second[['Frequency','Power','Mode']]
+            df_second['initial_y'] =  0
+            length=10
+            factor=-1
+            df_second['final_y'] = factor*df_second['Power'] + length  
+            df_second=df_second[['Frequency','initial_y','final_y','Power','Mode']]
             self.inverted_slider_source = ColumnDataSource(df_second.to_dict('list'))
-            self.env.fig_other_periodogram.ray(x="Frequency",
-                                        y=-300,
-                                        source= self.inverted_slider_source,
-                                        length=300, 
-                                        angle=np.pi/2,
-                                        name='vertical_inverted_line',
-                                        line_dash='dotted',
-                                        color={'field': 'Mode', 
-                                        'transform': color_mapper})
+            # self.env.fig_other_periodogram.ray(x="Frequency",
+            #                             y=-300,
+            #                             source= self.inverted_slider_source,
+            #                             length=300, 
+            #                             angle=np.pi/2,
+            #                             name='vertical_inverted_line',
+            #                             line_dash='dotted',
+            #                             color={'field': 'Mode', 
+            #                             'transform': color_mapper})
+            
+            self.env.fig_other_periodogram.segment(x0='Frequency', 
+                                                   y0='initial_y', 
+                                                   x1='Frequency', 
+                                                   y1='final_y',
+                                                   source= self.inverted_slider_source, 
+                                                   line_dash='dotted', 
+                                                   color={'field': 'Mode', 
+                                                   'transform': color_mapper})
+
+
             self.env.inverted_slider.on_change(
                 'value',self.update_inverted_slider)
         # else:
@@ -1065,7 +1080,11 @@ class Interactive(Environment):
 
     def update_inverted_slider(self, attr,old, new):
         df_second=self.tb_se_second_source.to_df()
-        df_second=df_second[['Frequency','Power','Mode']]
+        df_second['initial_y'] =  0
+        length=10
+        factor=-1
+        df_second['final_y'] = factor*df_second['Power'] + length  
+        df_second=df_second[['Frequency','initial_y','final_y','Power','Mode']]
         value = float(self.env.inverted_slider.value)
         df_second['Frequency']=df_second['Frequency']+value
         old_data = ColumnDataSource(df_second.to_dict('list'))
