@@ -22,7 +22,6 @@ class Environment(object):
     selection_program_text = None
 
     text_banner = None
-    Message = None
 
     v_flag_duplicate = None
     v_flag_source = None
@@ -347,7 +346,8 @@ class Environment(object):
     inverted_line_xvalue_text = None
     inverted_line_update_button = None
     check_show_inverted_lines = None
-
+    Message = None
+    message_banner = None
     # selected_filename = None
     # selected_filename = None
 

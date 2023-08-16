@@ -1,7 +1,7 @@
 from env import Environment
 import numpy as np
 from bokeh.models import ColumnDataSource
-from bokeh.models import CustomJS, TextInput, Paragraph,PreText
+from bokeh.models import CustomJS, TextInput, Paragraph,PreText,Div
 from bokeh.models import Button, Select, RadioGroup  # for saving data
 from bokeh.plotting import figure
 import pandas as pd
@@ -82,6 +82,7 @@ class Catalog(Environment):
         # self.env.text_banner_bp_rp = Paragraph(text='', width=1000, height=10)
         # self.env.text_banner_dmin= Paragraph(text='', width=1000, height=10)
 
+        self.env.message_banner = Div(text='', width=1000, height=25)
 
         self.env.next_button = Button(label="Next Source", button_type=self.env.button_type,width=150)
         self.env.next_button.on_click(self.next)
@@ -137,7 +138,7 @@ class Catalog(Environment):
                                         ))
             
             self.env.tb_source.data = dict(new_data.data)
-            
+
         
     def update_all(self,attrname, old, new):
         # print('aperutre_function')

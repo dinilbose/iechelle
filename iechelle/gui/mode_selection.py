@@ -237,6 +237,7 @@ class Interactive(Environment):
         self.inverted_slider()
         self.old_frequency_min = 0
         self.old_frequency_max = 0
+        self.publish_message(text='Select Fits File')
 
 
 
@@ -254,14 +255,13 @@ class Interactive(Environment):
         #         power=list(self.periodogram.power.value),
         #         Mode = mm,
         #     ))
-        
+        self.publish_message(text='Updating')
         self.trim_frequency()
-
         # self.env.tb_other_periodogram.data=dict(old_data.data)
         self.clear_se_table1()
         self.clear_se_table2()
         self.update_plot(0, 0, 0)
-
+        self.publish_message(text='Ready')
 
 
     def initialize_dnu_periodogram(self):
@@ -709,6 +709,7 @@ class Interactive(Environment):
         '''
         Test function: Read fits file and get f and p"
         '''
+        self.publish_message(text='Reading Fits')
         ff = np.array([])
         pp = np.array([])
         id_mycatalog=self.env.tb_source.data['id_mycatalog'][0]
@@ -733,6 +734,8 @@ class Interactive(Environment):
             pp = pp.byteswap().newbyteorder()
         else:
             print('File does not exist')
+        self.publish_message(text='Read Fits')
+
         return ff, pp
 
     def update_value(self):
@@ -826,12 +829,14 @@ class Interactive(Environment):
             self.env.fig_other_periodogram.select('vertical_line').visible = True
         else:
             self.env.fig_other_periodogram.select('vertical_line').visible = False
+        
+        self.publish_message(text='Ready')
 
 
 
 
     def update_plot(self, attr, old, new):
-        
+        self.publish_message(text='Updating Plot')
         if self.check_change_in_frequency_limit():
             print('Triming Frequency')
             self.trim_frequency()
@@ -880,6 +885,7 @@ class Interactive(Environment):
                 # self.env.fig_other_periodogram.select('vertical_inverted_line').visible = False
 
         self.make_grid()
+        self.publish_message(text='Ready')
 
     def _validate_numax(self, numax):
         """
@@ -1783,10 +1789,11 @@ class Interactive(Environment):
         # self.selection_prd_to_table_fig(0,0,0)
         # self.selection_table_to_grid_fig(0,0,0)
         # self.selection_table_to_prd_fig(0,0,0)
-
+        self.publish_message('Getting Selection')
         self.selection_grid_to_prd_fig(0,0,0)
         self.selection_prd_to_grid_fig(0,0,0)
         self.selection_grid_to_table_fig(0,0,0)
+        self.publish_message('Ready')
 
 
 
@@ -1996,7 +2003,8 @@ class Interactive(Environment):
 
         apol.peakbagging.save_pkb(file_name,pkb_array)
         print('PKB file saved to ',file_name)
-
+        fulltext='Saving '+ file_name + ' :Ready'
+        self.publish_message(text=fulltext)
 
     def load_pkb_to_second_tab(self,file_name):
         "Loads pkb and return df for second tab"
@@ -2030,7 +2038,7 @@ class Interactive(Environment):
         return df_pkb
 
     def load_table_2(self):
-
+        self.publish_message(text='Loading pkb')
         id=self.env.tb_source.data['id'][0]
         data_folder = self.env.tb_source.data['data_folder'][id]
         id_mycatalog = self.env.tb_source.data['id_mycatalog_all'][id]
@@ -2051,6 +2059,9 @@ class Interactive(Environment):
         self.tb_se_second_source.data = dict(old_data.data)
         self.apply_modes(df)
         print('Loaded', file_name)
+        fulltext='Loaded '+ file_name + ' :Ready'
+        self.publish_message(text=fulltext)
+
 
 
 
@@ -2139,9 +2150,21 @@ class Interactive(Environment):
         #     df_other.loc[ind,'Mode'] = str(mode)
         #     old_data = ColumnDataSource(df_other.to_dict('list'))
         #     self.env.tb_other_periodogram.data = dict(old_data.data)
+    def publish_message(self,text=''):
+        id=self.env.tb_source.data['id'][0]
+        id_mycatalog=self.env.tb_source.data['id_mycatalog_all'][id]
+        #id_text=self.env.tb_source.data['id_mycatalog'][0]
+        #print('Whole data',self.env.tb_source.data )
+        full_text = str(id_mycatalog) + ': ' + text
+        # full_text = """
+        # <h1 style="text-align:center;">Welcome to My Bokeh App</h1>
+        # <p style="text-align:center;">This is a centered text banner.</p>
+        # """
         
+        self.env.message_banner.text=full_text
 
     def apply_modes(self,table):
+        self.publish_message(text='Applying Modes')
         df_second=table
         df_second['Mode']=df_second['Mode'].astype(str)
         df_second['Frequency']=df_second['Frequency'].round(
@@ -2170,9 +2193,12 @@ class Interactive(Environment):
             df_other.loc[ind,'Mode'] = str(mode)
             old_data = ColumnDataSource(df_other.to_dict('list'))
             self.env.tb_other_periodogram.data = dict(old_data.data)
+        self.publish_message(text='Ready')
 
 
     def load_from_file(self):
+        self.publish_message(text='Loading from File')
+
         root = Tk()
         root.attributes('-topmost', True)
         root.withdraw()
@@ -2195,9 +2221,11 @@ class Interactive(Environment):
             self.tb_se_second_source.data = dict(old_data.data)
             self.apply_modes(df)
             print('Loaded', file_name)
+            self.publish_message(text='File Loaded, Ready')
 
 
     def save_as_table_2(self):
+        self.publish_message(text='Saving File')
         print('Load from file')
         root = Tk()
         root.attributes('-topmost', True)
@@ -2220,3 +2248,5 @@ class Interactive(Environment):
 
             apol.peakbagging.save_pkb(file_name,pkb_array)
             print('PKB file saved to ',file_name)
+            fulltext='PKB file saved to '+file_name+': Ready'
+            self.publish_message(text=fulltext)
