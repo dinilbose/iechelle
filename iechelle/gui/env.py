@@ -340,6 +340,14 @@ class Environment(object):
     save_as_table_2_button = None
     load_from_file_table_2_button = None
     load_from_specific_file_table_2_button = None
+
+    inverted_line_initial_y_text = None
+    inverted_line_length_text = None
+    inverted_line_scale_text = None
+    inverted_line_xvalue_text = None
+    inverted_line_update_button = None
+    check_show_inverted_lines = None
+
     # selected_filename = None
     # selected_filename = None
 

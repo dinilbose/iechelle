@@ -173,6 +173,12 @@ class Interactive(Environment):
                                                 width=100,
                                                 )
 
+        self.env.check_show_inverted_lines = CheckboxGroup(
+                                                labels=['Inverted lines'],
+                                                active=[0,1],
+                                                height=10,
+                                                width=100,
+                                                )
 
         self.env.check_show_modes_grid = CheckboxGroup(
                                         labels=['Show Modes Only'],
@@ -206,11 +212,26 @@ class Interactive(Environment):
             label="Find Peak", button_type=self.env.button_type, width=150)
         self.env.find_peaks_button.on_click(self.find_peak_frequencies)
 
+        # Inverted line 
+        self.env.inverted_line_initial_y_text = TextInput(
+            value=str(0), title="Initial y", width=50)
+        self.env.inverted_line_length_text = TextInput(
+            value=str(10), title="Length", width=50)
+        self.env.inverted_line_scale_text = TextInput(
+            value=str(-1), title="Scale", width=50)
+        self.env.inverted_line_xvalue_text = TextInput(
+            value=str(0), title="x value", width=50)        
+        self.env.inverted_line_update_button = Button(
+            label="Update Slider", 
+            button_type=self.env.button_type, 
+            width=100)
+        self.env.inverted_line_update_button.on_click(
+            self.update_inverted_line)
 
 
         #self.update_selection_tables()
         
-        # self.env.tb_source.data.on_change('indices',self.update_source)
+        self.env.tb_source.on_change('data',self.update_whole_plot)
 
         self.plot_vertical_lines()
         self.inverted_slider()
@@ -762,6 +783,51 @@ class Interactive(Environment):
 
         return value
 
+    def update_whole_plot(self,attr, old , new):
+        self.trim_frequency()
+        self.clear_se_table1()
+        self.clear_se_table2()
+
+
+        self.id_mycatalog = self.env.tb_source.data['id_mycatalog'][0]
+        dnu = self.dnu_val
+        self.env.fig_tpfint.xaxis.axis_label = r'Frequency / {:.3f} Mod. 1'.format(
+            dnu)
+
+        self.make_tb_echelle_diagram()
+
+        ep = self.env.tb_echelle_diagram.data['image']*self.env.power_unit
+        lo, hi = np.nanpercentile(ep.value, [0.1, 99.9])
+        vlo, vhi = 0.3 * lo, 1.7 * hi
+        vstep = (lo - hi)/500
+                # self.palette = getattr(bokeh.palettes, 
+                #                     self.env.select_color_palette.value)[9] 
+        pal=getattr(bokeh.palettes, self.env.select_color_palette.value)
+        if type(pal)==dict:
+            self.palette = pal[9]
+        else:
+            self.palette = pal  
+                
+            if self.env.check_reverse_color_palette.active[0]!=1:
+                self.palette = list(reversed(self.palette))
+        color_mapper = LogColorMapper(palette=self.palette, low=lo, high=hi)
+        self.env.fig_tpfint.select(
+            'img').glyph.color_mapper.low = color_mapper.low
+        self.env.fig_tpfint.select(
+            'img').glyph.color_mapper.high = color_mapper.high
+        self.env.fig_tpfint.select(
+            'img').glyph.color_mapper.palette = getattr(color_mapper,'palette')
+        self.env.stretch_sliderint.start = vlo
+        self.env.stretch_sliderint.end = vhi
+        self.env.stretch_sliderint.value = (lo, hi)
+        self.env.dnu_slider.start = 0.01
+        self.env.dnu_slider.end = self.env.maxdnu
+        if self.env.check_show_horizontal_lines.active[0]==0:
+            self.env.fig_other_periodogram.select('vertical_line').visible = True
+        else:
+            self.env.fig_other_periodogram.select('vertical_line').visible = False
+
+
 
 
     def update_plot(self, attr, old, new):
@@ -808,10 +874,10 @@ class Interactive(Environment):
                 self.env.dnu_slider.end = self.env.maxdnu
             if self.env.check_show_horizontal_lines.active[0]==0:
                 self.env.fig_other_periodogram.select('vertical_line').visible = True
-                self.env.fig_other_periodogram.select('vertical_inverted_line').visible = True
+                # self.env.fig_other_periodogram.select('vertical_inverted_line').visible = True
             else:
                 self.env.fig_other_periodogram.select('vertical_line').visible = False
-                self.env.fig_other_periodogram.select('vertical_inverted_line').visible = False
+                # self.env.fig_other_periodogram.select('vertical_inverted_line').visible = False
 
         self.make_grid()
 
@@ -1038,7 +1104,7 @@ class Interactive(Environment):
                                             value=0,
                                             step=1,
                                             title="Inverted Slider",
-                                            width=1400)
+                                            width=900)
 
             color_map = self.mode_color_map
             color_mapper = CategoricalColorMapper(
@@ -1067,6 +1133,7 @@ class Interactive(Environment):
                                                    y0='initial_y', 
                                                    x1='Frequency', 
                                                    y1='final_y',
+                                                   name='vertical_inverted_line',
                                                    source= self.inverted_slider_source, 
                                                    line_dash='dotted', 
                                                    color={'field': 'Mode', 
@@ -1079,16 +1146,42 @@ class Interactive(Environment):
         #     self.update_inverted_slide(0,0,0)
 
     def update_inverted_slider(self, attr,old, new):
+        """
+        Update x value
+        """
+        self.env.inverted_line_xvalue_text.value = str(
+                            self.env.inverted_slider.value)
+        self.update_inverted_line()
+
+    def update_inverted_line(self):
+        """
+        Update inverted line
+        """ 
         df_second=self.tb_se_second_source.to_df()
-        df_second['initial_y'] =  0
-        length=10
-        factor=-1
+        df_second['initial_y'] = float(self.env.inverted_line_initial_y_text.value)
+        length=float(self.env.inverted_line_length_text.value)
+        factor=float(self.env.inverted_line_scale_text.value)
         df_second['final_y'] = factor*df_second['Power'] + length  
         df_second=df_second[['Frequency','initial_y','final_y','Power','Mode']]
-        value = float(self.env.inverted_slider.value)
+        value = float(self.env.inverted_line_xvalue_text.value)
         df_second['Frequency']=df_second['Frequency']+value
         old_data = ColumnDataSource(df_second.to_dict('list'))
         self.inverted_slider_source.data=dict(old_data.data)
+
+        if self.env.check_show_inverted_lines.active[0]==0:
+            # print('Showing inverted line')
+            # self.env.fig_other_periodogram.select('vertical_line').visible = True
+            self.env.fig_other_periodogram.select(
+                'vertical_inverted_line').visible = True
+        else:
+            # print('Turn off inverted line')
+            old_data = ColumnDataSource(data=dict())
+            self.inverted_slider_source.data=dict(old_data.data)
+
+            # self.env.fig_other_periodogram.select('vertical_line').visible = False
+            self.env.fig_other_periodogram.select(
+                'vertical_inverted_line').visible = False
+
 
 
     def _make_echelle_elements(self, deltanu, cmap='hot',
@@ -1908,6 +2001,7 @@ class Interactive(Environment):
     def load_pkb_to_second_tab(self,file_name):
         "Loads pkb and return df for second tab"
         pkb_array = apol.peakbagging.fit_tools.read_pkb(file_name)
+        pkb_array = pkb_array.reshape(-1, len(self.env.pkb_columns))
         df_pkb = pd.DataFrame(pkb_array,columns=self.env.pkb_columns)
         df_pkb['nu'] = df_pkb['nu'].astype(float).round(4)
 
@@ -1940,8 +2034,9 @@ class Interactive(Environment):
         id=self.env.tb_source.data['id'][0]
         data_folder = self.env.tb_source.data['data_folder'][id]
         id_mycatalog = self.env.tb_source.data['id_mycatalog_all'][id]
-        file_name = data_folder+'/'+'modes_param.pkb'
-
+        #file_name = data_folder+'/'+'modes_param.pkb'
+        file_name = data_folder+'/'+'modes_parameter_selected.pkb'
+        #modes_parameter_selected.pkb
 
 
         df=self.load_pkb_to_second_tab(file_name)

@@ -87,16 +87,23 @@ layer_1 = column(next_dflt_lay)
 
 # notes_lay1 = column(env.text_Notes_w)
 layout_catalog=column( row(env.open_file_button, env.selected_filename_text), 
-
-    row(
+                        row(
                             # column(
                                 #layer_1,
                                 #  flag_lay1
                                 #  ),
                           tab_interactive_layout,
                           column(env.fig_other_periodogram,
-                                 env.inverted_slider,
                                  row(
+                                     env.inverted_slider,
+                                     env.inverted_line_initial_y_text,
+                                     env.inverted_line_length_text,
+                                     env.inverted_line_scale_text,
+                                     env.inverted_line_xvalue_text,
+                                     env.check_show_inverted_lines,
+                                     env.inverted_line_update_button,
+                                    ),    
+                                    row(
                                     env.table_se_first,
                                     column(
                                             env.test_button,
