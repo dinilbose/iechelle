@@ -108,6 +108,7 @@ layout_catalog = column(
                         env.table_se_first,
                         ),
                 column(
+                    Div(text="",width=150,height=100),
                     env.test_button,
                     env.find_peaks_button,
                     env.clear_se_table1_button,
@@ -122,6 +123,7 @@ layout_catalog = column(
                         env.table_se_second,
                         ),
                 column(
+                    Div(text="",width=150,height=100),
                     env.load_table_2_button,
                     env.save_table_2_button,
                     env.load_from_specific_file_table_2_button,
