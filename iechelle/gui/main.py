@@ -7,6 +7,7 @@ import pandas
 # from bokeh.models import Button  # for saving data
 # from bokeh.models.widgets import Tabs
 # from bokeh.layouts import layout, Spacer
+from bokeh.models import Div
 
 from bokeh.models.layouts import TabPanel, Tabs
 
@@ -102,7 +103,10 @@ layout_catalog = column(
                 env.inverted_line_update_button,
             ),
             row(
-                env.table_se_first,
+                column(
+                        Div(text="<h2 style='text-align: center;'> Table 1 / Selection </h2>", width=500),
+                        env.table_se_first,
+                        ),
                 column(
                     env.test_button,
                     env.find_peaks_button,
@@ -113,7 +117,10 @@ layout_catalog = column(
                     env.move_se_1_2_button,
                     env.move_se_2_1_button,
                 ),
-                env.table_se_second,
+                column(
+                        Div(text="<h2 style='text-align: center;'> Table 2 / Saving", width=500),                
+                        env.table_se_second,
+                        ),
                 column(
                     env.load_table_2_button,
                     env.save_table_2_button,
