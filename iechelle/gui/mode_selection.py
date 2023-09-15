@@ -6,7 +6,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 # from scipy.signal import find_peaks
 from bokeh.models import ColumnDataSource
-
+import functions
 from astropy import units as u
 # from astropy.units import cds
 
@@ -118,7 +118,7 @@ class Interactive(Environment):
         self.env.save_table_2_button.on_click(self.save_table_2)
 
         self.env.load_table_2_button = Button(
-                                        label="Load from default file", 
+                                        label="Load PKB from default file", 
                                         button_type=self.env.button_type, width=150)
         self.env.load_table_2_button.on_click(self.load_table_2)
 
@@ -129,9 +129,21 @@ class Interactive(Environment):
         self.env.save_as_table_2_button.on_click(self.save_as_table_2)
 
         self.env.load_from_specific_file_table_2_button  = Button(
-                                        label="Load from specific file", 
+                                        label="Load PKB from specific file", 
                                         button_type=self.env.button_type, width=150)
         self.env.load_from_specific_file_table_2_button.on_click(self.load_from_file)
+
+        self.env.load_bkg_param_from_file_button  = Button(
+                                        label="Load BKG from specific file", 
+                                        button_type=self.env.button_type, width=150)
+        self.env.load_bkg_param_from_file_button.on_click(self.load_bkg_param_from_file)
+
+
+        self.env.select_grid_menu = Select(title='Select Grid', 
+                                         options=['Obs'], 
+                                         value='Obs',
+                                         width=150)
+        
 
         self.env.grid_circle_size = TextInput(
             value=str(2), title="Circle Size", width=80)
@@ -191,6 +203,7 @@ class Interactive(Environment):
         self.make_tb_echelle_diagram()
         self.interact_echelle()
         self.make_grid()
+        self.initilize_plot_table()
 
         self.env.test_button = Button(
             label="Get Selection", button_type=self.env.button_type, width=150)
@@ -211,6 +224,15 @@ class Interactive(Environment):
         self.env.find_peaks_button = Button(
             label="Find Peak", button_type=self.env.button_type, width=150)
         self.env.find_peaks_button.on_click(self.find_peak_frequencies)
+
+        self.env.calculate_synthetic_psd_button = Button(
+            label="Calculate Synthetic PSD", button_type=self.env.button_type, width=150)
+        self.env.calculate_synthetic_psd_button.on_click(self.calculate_synthetic_psd)
+
+        self.env.show_plot = Button(
+            label="Show Plot", button_type=self.env.button_type, width=150)
+        self.env.show_plot.on_click(self.show_plot)
+
 
         # Inverted line 
         self.env.inverted_line_initial_y_text = TextInput(
@@ -239,8 +261,30 @@ class Interactive(Environment):
         self.old_frequency_max = 0
         self.publish_message(text='Select Fits File')
 
+    def initilize_plot_table(self):
+        '''
+        This function initialise plot table, later this table will further used for 
+        plotting different test.
+        '''
 
+        self.env.tb_plot = ColumnDataSource(
+            data=dict(
+                name=list(['Grid']), colour = list(['grey'])
+            ))
+    
+        columns = [
+            TableColumn(field="name", title="Name"),
+            TableColumn(field="colour", title="Colour"),
+        ]
 
+        self.env.table_plot = DataTable(
+            source=self.env.tb_plot,
+            columns=columns,
+            width=200,
+            height=400,
+            selectable="checkbox",
+        )
+        self.env.tb_plot.selected.indices = [0]
 
     def update_source(self,attr,old,new):
         # ff, pp = self.read_fits_get_fp()
@@ -272,7 +316,7 @@ class Interactive(Environment):
         mm = ['999']*(len(pp))
 
         self.env.minimum_frequency = 1  # 1
-        self.env.maximum_frequency = 800  # 8000
+        self.env.maximum_frequency = 8000  # 8000
         self.env.maxdnu = 50
         self.env.dnu_val = 24.8
 
@@ -302,6 +346,7 @@ class Interactive(Environment):
                     # cuttoff=list(np.array([0])),
                 ))    
 
+
         # Intialize other periodgram
         fig_other_periodogram = figure(
             width=1400,
@@ -322,12 +367,12 @@ class Interactive(Environment):
                                      alpha=0.7, 
                                      color = {'field': 'Mode', 
                                                 'transform': color_mapper},
-                                     **self.env.selection,
+                                     **self.env.selection,name='Grid'
                                      )
 
         fig_other_periodogram.line("frequency", "power",
                                    source=tb_other_periodogram,
-                                   alpha=0.7, color="grey")
+                                   alpha=0.7, color="grey",name='Grid')
         #color="#1F77B4"
         fig_other_periodogram.ray(
             y="other_prd_cuttoff",
@@ -737,6 +782,74 @@ class Interactive(Environment):
         self.publish_message(text='Read Fits')
 
         return ff, pp
+
+    def calculate_synthetic_psd(self):
+        self.publish_message('Calculating Synthetic Spectra; Busy')
+        self.env.select_grid_menu.options = ['Obs', 'Syn', 'Sub']
+
+        data = functions. calculate_synthetic_spectrum(fits_file=self.env.selected_filename_text.text, 
+                                                     bkg_file=self.env.selected_filename_background_text.text, 
+                                                     pkb_file=self.env.selected_filename_pkb_text.text, 
+                                                     n_harvey=2)
+        data['sub_psd'] = data['psd'] - data ['synthetic_psd']
+        freq_min =  float(self.env.frequency_minimum_text.value)
+        freq_max =  float(self.env.frequency_maximum_text.value)
+        data = data.query('freq>@freq_min & freq<@freq_max')
+        freq = data.freq.values
+        power = data.psd.values
+        name= 'Obs'
+        self.add_plot_other_periodogram(freq = freq, 
+                                        power= power,
+                                        name= name, 
+                                        color = 'blue')
+
+        freq = data.freq.values
+        power = data.synthetic_psd.values
+        name= 'Syn'
+        self.add_plot_other_periodogram(freq = freq, 
+                                        power = power,
+                                        name= name, 
+                                        color = 'green')
+        
+                
+        freq = data.freq.values
+        power = data.sub_psd.values
+        name= 'Sub'
+        self.add_plot_other_periodogram(freq = freq, 
+                                        power= power,
+                                        name= name, 
+                                        color = 'red')
+        old_data=ColumnDataSource(
+        data=dict(
+            name=list(['Grid', 'Obs' ,'Syn', 'Sub']), colour = list(['grey', 'blue', 'green', 'red'])
+        ))
+        self.env.tb_plot.data = dict(old_data.data)
+        self.env.tb_plot.selected.indices = [0]
+        self.publish_message('Ready')
+
+        return data
+
+    def show_plot(self):
+        df = self.env.tb_plot.to_df() 
+        for name in df['name']:
+            self.env.fig_other_periodogram.select(name).visible = False
+        ind =self.env.tb_plot.selected.indices
+        df = df.loc[ind]
+        print('df after selection', df)
+        for name in df['name']:
+            self.env.fig_other_periodogram.select(name).visible = True
+        print ('Finished')
+
+    def add_plot_other_periodogram(self,freq =None,power= None,
+                                   name= None, color = None ):        
+        
+        self.env.fig_other_periodogram.line(freq, power,
+                           name=name,
+                            alpha=0.7, color=color)  
+        self.env.fig_other_periodogram.select(name).visible = False
+
+
+
 
     def update_value(self):
         self.env.minimum_frequency = float(
@@ -1938,14 +2051,26 @@ class Interactive(Environment):
         return val
     
     def trim_frequency(self):
+        print ('Value of selection:', self.env.select_mode_menu.value)
+        if self.env.select_grid_menu.value == 'Obs':
+            ff, pp = self.read_fits_get_fp()
+            ff = (ff*u.Hz).to(self.env.frequency_unit).value
+            pp = pp*self.env.power_unit
+            pp = pp.value
+        if self.env.select_grid_menu.value == 'Syn':
+            data = self.calculate_synthetic_psd()
+            ff = data.freq.values
+            pp = data.synthetic_psd.values
+        if self.env.select_grid_menu.value == 'Sub':
+            data = self.calculate_synthetic_psd()
+            data['sub_psd'] = data['psd'] - data ['synthetic_psd']
+            ff = data.freq.values
+            pp = data.sub_psd.values
 
-        ff, pp = self.read_fits_get_fp()
         min_freq = int(self.env.minimum_frequency)*self.env.frequency_unit
         max_freq = int(self.env.maximum_frequency)*self.env.frequency_unit
 
-        ff = (ff*u.Hz).to(self.env.frequency_unit).value
-        pp = pp*self.env.power_unit
-        pp = pp.value
+
         
         ind=(ff <= max_freq.value) & (ff >= min_freq.value)
 
@@ -2148,7 +2273,7 @@ class Interactive(Environment):
         #     ind = df_other.query('frequency == @list_freq').index
 
         #     df_other.loc[ind,'Mode'] = str(mode)
-        #     old_data = ColumnDataSource(df_other.to_dict('list'))
+        #     old_data = ColumnDataself.env.selected_filename_textSource(df_other.to_dict('list'))
         #     self.env.tb_other_periodogram.data = dict(old_data.data)
     def publish_message(self,text=''):
         id=self.env.tb_source.data['id'][0]
@@ -2197,6 +2322,9 @@ class Interactive(Environment):
 
 
     def load_from_file(self):
+        '''
+        Load pkb from file
+        '''
         self.publish_message(text='Loading from File')
 
         root = Tk()
@@ -2208,9 +2336,9 @@ class Interactive(Environment):
             id=self.env.tb_source.data['id'][0]
             data_folder = self.env.tb_source.data['data_folder'][id]
             id_mycatalog = self.env.tb_source.data['id_mycatalog_all'][id]
-
+            self.publish_message(text='Loading from File')
             df=self.load_pkb_to_second_tab(file_name)
-
+            
             old_data = ColumnDataSource(
                         data=dict(Slicefreq = df['Slicefreq'].to_list(), 
                                 Frequency = df['Frequency'].to_list(), 
@@ -2221,7 +2349,43 @@ class Interactive(Environment):
             self.tb_se_second_source.data = dict(old_data.data)
             self.apply_modes(df)
             print('Loaded', file_name)
+            self.env.selected_filename_pkb_text.text = file_name.name
             self.publish_message(text='File Loaded, Ready')
+
+
+    def load_bkg_param_from_file(self):
+        '''
+        Load BKG from background file
+        '''
+        self.publish_message(text='Loading BKG from File')
+
+        root = Tk()
+        root.attributes('-topmost', True)
+        root.withdraw()
+        file_name = askopenfile()  # blocking
+        if file_name:
+
+            self.env.selected_filename_background_text.text = file_name.name
+        self.publish_message(text='Ready')
+
+            # id=self.env.tb_source.data['id'][0]
+            # data_folder = self.env.tb_source.data['data_folder'][id]
+            # id_mycatalog = self.env.tb_source.data['id_mycatalog_all'][id]
+
+            # df=self.load_pkb_to_second_tab(file_name)
+            
+            # old_data = ColumnDataSource(
+            #             data=dict(Slicefreq = df['Slicefreq'].to_list(), 
+            #                     Frequency = df['Frequency'].to_list(), 
+            #                     Power = df['Power'].to_list(),
+            #                     Mode = df['Mode'].to_list(),
+            #                     xx = df['xx'].to_list()
+            #                     ))
+            # self.tb_se_second_source.data = dict(old_data.data)
+            # self.apply_modes(df)
+            # print('Loaded', file_name)
+            # self.env.selected_filename_pkb_text.text = file_name
+            # self.publish_message(text='File Loaded, Ready')
 
 
     def save_as_table_2(self):

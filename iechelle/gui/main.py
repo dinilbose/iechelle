@@ -45,7 +45,8 @@ tab_int_1 = column(
         nxt_prv_button,
         env.select_color_palette,
         env.check_reverse_color_palette),
-    row(env.check_make_grid,
+    row(env.select_grid_menu,
+        env.check_make_grid,
         env.check_show_modes_grid,
         env.check_show_echelle,
         env.grid_circle_size,
@@ -57,42 +58,31 @@ tab_int_1 = column(
 tab_interactive_layout = column(row(tab_int_1))
 
 
-# flag_lay1 = column(env.text_flag_duplicate,
-#                    env.text_flag_source,
-#                    env.text_flag_check,
-#                    env.save_userinput_button)
-
 next_lay1 = row(env.previous_button,
                 env.next_button)
 
 next_dflt_lay = column(next_lay1)
 
-# query_lay1 = column(
-#                 row(env.text_cluster_query),
-#                     env.update_cluster_button,
-#                 row(env.text_catalog_query),
-#                     env.update_catalog_button,
-#                 row(env.int_select_sector),
-#                 row(env.text_id_mycatalog_query),
-#                     env.update_id_mycatalog_button,
-#                 row(env.text_id_query),
-#                     env.update_id_button
-#                 )
-
-# layer_1 = column(query_lay1,next_dflt_lay)
 layer_1 = column(next_dflt_lay)
 
-# notes_lay1 = column(env.text_Notes_w)
 layout_catalog = column(
     row(
         env.open_file_button,
         env.selected_filename_text,
     ),
+    row(
+        env.load_from_specific_file_table_2_button,
+        env.selected_filename_pkb_text,
+    ),
+    row(
+        env.load_bkg_param_from_file_button,
+        env.selected_filename_background_text,
+    ),
     env.message_banner,
     row(
         tab_interactive_layout,
         column(
-            env.fig_other_periodogram,
+            env.fig_other_periodogram, 
             row(
                 env.inverted_slider,
                 env.inverted_line_initial_y_text,
@@ -102,6 +92,7 @@ layout_catalog = column(
                 env.check_show_inverted_lines,
                 env.inverted_line_update_button,
             ),
+
             row(
                 column(
                         Div(text="<h2 style='text-align: center;'> Table 1 / Selection </h2>", width=500),
@@ -129,12 +120,20 @@ layout_catalog = column(
                     env.load_from_specific_file_table_2_button,
                     env.save_as_table_2_button,
                     env.clear_se_table2_button,
+                    env.calculate_synthetic_psd_button,
                 ),
             ),
-        )
+        ),
+                        column(env.table_plot, env.show_plot),
+
     ),
-sizing_mode="stretch_both",  # Optional: Adjust sizing mode
-css_classes=["centered-column"],  
+    # column(
+    #     Div(text="<h2 style='text-align: center;'> FITS:", width=500),env.selected_filename_text,
+    #     env.selected_filename_pkb_text,
+    #     env.selected_filename_background_text,
+    # ),
+    sizing_mode="stretch_both",  # Optional: Adjust sizing mode
+    css_classes=["centered-column"],  
 )
 
 # layout_catalog = env.stretch_sliderint
