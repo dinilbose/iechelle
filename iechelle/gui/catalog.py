@@ -98,11 +98,46 @@ class Catalog(Environment):
         # self.initiate_userinput()
 
         self.env.selected_filename_text = PreText()
+        self.env.selected_filename_fits_text = PreText()
+        self.env.selected_filename_pkb_text = PreText()
+        self.env.selected_filename_background_text = PreText()
+
+
         self.env.open_folder_button = Button(label="Select Directory")
         self.env.open_folder_button.on_click(lambda x: self.select_folder())
         self.env.open_file_button = Button(label="Select Fits File")
         self.env.open_file_button.on_click(lambda x: self.select_file())
-    
+        
+        self.env.open_catalog_button = Button(label="Select Fits File")
+        self.env.open_catalog_button.on_click(lambda x: self.select_catalog())
+
+
+    def select_catalog():
+        root = Tk()
+        root.attributes('-topmost', True)
+        root.withdraw()
+        file = askopenfile()  # blocking
+        if file:
+            file_name = file.name
+            fits_path=os.path.abspath(file_name)
+            self.env.selected_filename_text.text = fits_path
+            
+            id_mycatalog_all=list([Path(file_name).stem])
+            id_all = np.arange(0,len(self.id_mycatalog_all))
+            path_fits=list([fits_path])
+            id=0
+            id_mycatalog=list([Path(file_name).stem])
+            data_folder=list([])
+            new_data=ColumnDataSource(data=dict(id_all=list(id_all),
+                                        id_mycatalog_all=list(id_mycatalog_all),
+                                        path_fits=path_fits,
+                                        id=list([id]),
+                                        id_mycatalog=list(self.id_mycatalog),
+                                        data_folder=list([str(Path(file_name).parent)]),
+                                        ))
+            
+            self.env.tb_source.data = dict(new_data.data)
+
     def select_folder(self):
         root = Tk()
         root.attributes('-topmost', True)
@@ -122,7 +157,8 @@ class Catalog(Environment):
             file_name = file.name
             fits_path=os.path.abspath(file_name)
             self.env.selected_filename_text.text = fits_path
-            
+            self.env.selected_filename_fits_text.text = fits_path
+
             id_mycatalog_all=list([Path(file_name).stem])
             id_all = np.arange(0,len(self.id_mycatalog_all))
             path_fits=list([fits_path])

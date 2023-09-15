@@ -336,9 +336,12 @@ class Environment(object):
     selected_filename_text = None
     open_folder_button = None
     open_file_button = None
+    open_catalog_button = None
+
     save_as_table_2_button = None
     load_from_file_table_2_button = None
     load_from_specific_file_table_2_button = None
+    load_bkg_param_from_file_button = None
 
     inverted_line_initial_y_text = None
     inverted_line_length_text = None
@@ -348,6 +351,14 @@ class Environment(object):
     check_show_inverted_lines = None
     Message = None
     message_banner = None
+    selected_filename_background_text = None
+    selected_filename_pkb_text = None
+    selected_filename_fits_text = None
+    calculate_synthetic_psd_button = None
+    tb_plot = None
+    table_plot = None
+    select_grid_menu = None
+    show_plot = None
     # selected_filename = None
     # selected_filename = None
 
