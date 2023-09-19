@@ -2122,7 +2122,12 @@ class Interactive(Environment):
         df_pkb['nu']=df['Frequency'].to_list()
         df_pkb['h']=df['Power'].to_list()
         df_pkb['l']=df['Mode'].astype(float).to_list()
+        deltanu = self.env.dnu_val
+        df_pkb['n']=np.rint(df['Frequency']/deltanu).astype(int)
+        print('deltanu',deltanu)
+        print(df_pkb['n'])
         df_pkb =df_pkb.fillna(0)
+
         pkb_array=df_pkb.values
         file_name=data_folder+'/'+'modes_parameter_selected.pkb'
 
@@ -2407,6 +2412,10 @@ class Interactive(Environment):
             df_pkb['nu']=df['Frequency'].to_list()
             df_pkb['h']=df['Power'].to_list()
             df_pkb['l']=df['Mode'].astype(float).to_list()
+            deltanu = self.env.dnu_val
+            df_pkb['n']=np.rint(df['Frequency']/deltanu).astype(int)
+            print('deltanu',deltanu)
+            print(df_pkb['n'])
             df_pkb =df_pkb.fillna(0)
             pkb_array=df_pkb.values
 
