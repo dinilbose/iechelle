@@ -71,12 +71,12 @@ layout_catalog = column(
         env.selected_filename_text,
     ),
     row(
-        env.load_from_specific_file_table_2_button,
-        env.selected_filename_pkb_text,
-    ),
-    row(
         env.load_bkg_param_from_file_button,
         env.selected_filename_background_text,
+    ),
+    row(
+        env.load_from_specific_file_table_2_button,
+        env.selected_filename_pkb_text,
     ),
     env.message_banner,
     row(
@@ -126,7 +126,10 @@ layout_catalog = column(
                 ),
             ),
         ),
-                        column(env.table_plot, env.show_plot),
+                        column(env.table_plot, 
+                               env.show_plot,
+                               env.calculate_synthetic_psd_button,
+                                ),
 
     ),
     # column(

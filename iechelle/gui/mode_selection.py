@@ -326,6 +326,7 @@ class Interactive(Environment):
         self.clear_se_table1()
         self.clear_se_table2()
         self.update_plot(0, 0, 0)
+        #self.update_value()
         self.publish_message(text='Ready')
 
 
@@ -944,6 +945,7 @@ class Interactive(Environment):
         self.trim_frequency()
         self.clear_se_table1()
         self.clear_se_table2()
+        self.update_plot(0, 0, 0)
 
 
         self.id_mycatalog = self.env.tb_source.data['id_mycatalog'][0]
@@ -2190,7 +2192,9 @@ class Interactive(Environment):
 
     def load_pkb_to_second_tab(self,file_name):
         "Loads pkb and return df for second tab"
-        pkb_array = apol.peakbagging.fit_tools.read_pkb(file_name)
+
+        pkb_array = np.loadtxt (file_name, skiprows=0)
+        #pkb_array = apol.peakbagging.fit_tools.read_pkb(file_name)
         if pkb_array.shape[1]==20:
             print('Using extended PKB array')
             pkb_array = pkb_array.reshape(-1, len(self.env.pkb_columns_extended))

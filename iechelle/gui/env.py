@@ -333,13 +333,13 @@ class Environment(object):
 
     pkb_columns=['n', 'l', 'nu', 'e_nu', 'h', 'e_h', 'w', 'e_w', 'a', 'e_a', 's', 'e_s', 'asym', 'e_asym']
     pkb_columns_extended = [
-    'n', 'l', 'nu', 'err_nu_minus', 'err_nu_plus', 
-    'height', 'err_height_minus', 'err_height_plus', 
-    'width', 'err_width_minus', 'err_width_plus', 
-    'angle', 'err_angle_minus', 'err_angle_plus', 
-    'split', 'err_split_minus', 'err_split_plus', 
-    'asym', 'err_asym_minus', 'err_asym_plus'
-]
+                                'n', 'l', 'nu', 'err_nu_minus', 'err_nu_plus', 
+                                'height', 'err_height_minus', 'err_height_plus', 
+                                'width', 'err_width_minus', 'err_width_plus', 
+                                'angle', 'err_angle_minus', 'err_angle_plus', 
+                                'split', 'err_split_minus', 'err_split_plus', 
+                                'asym', 'err_asym_minus', 'err_asym_plus'
+                            ]
 
 
     # New buttons catalog
