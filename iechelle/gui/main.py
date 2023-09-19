@@ -28,7 +28,7 @@ nxt_prv_button = row(env.next_button, env.previous_button, sizing_mode='fixed')
 
 tab_int_1 = column(
     # nxt_prv_button,
-    column(env.stretch_sliderint,
+    column(row(env.stretch_sliderint, env.check_color_map_lock),
            env.fig_tpfint,
            ),
     row(env.ll_button,
@@ -84,6 +84,7 @@ layout_catalog = column(
         column(
             env.fig_other_periodogram, 
             row(
+                env.check_periodogram_axis_scale,
                 env.inverted_slider,
                 env.inverted_line_initial_y_text,
                 env.inverted_line_length_text,

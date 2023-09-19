@@ -291,7 +291,8 @@ class Environment(object):
     select_color_palette = None
     grid_circle_size = None
     clear_se_table2_button= None
-
+    check_color_map_lock = None
+    check_periodogram_axis_scale = None 
     check_show_horizontal_lines = None
     check_make_grid  = None
     check_show_echelle = None

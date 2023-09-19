@@ -198,6 +198,23 @@ class Interactive(Environment):
                                         height=10,
                                         width=100,
                                         )
+        self.env.check_color_map_lock = CheckboxGroup(
+                                                labels=['Lock'],
+                                                active=[1],
+                                                height=10,
+                                                width=100,
+                                                )
+        
+        self.env.check_periodogram_axis_scale = CheckboxGroup(
+                                                labels=['Log Scale'],
+                                                active=[],
+                                                height=10,
+                                                width=100,
+                                                )
+
+        self.env.check_periodogram_axis_scale.on_change("active",
+                                                        self.toggle_periodogram_axis_scale)
+
 
         self.initialize_selection_tables()
         self.make_tb_echelle_diagram()
@@ -259,6 +276,7 @@ class Interactive(Environment):
         self.inverted_slider()
         self.old_frequency_min = 0
         self.old_frequency_max = 0
+        self.old_grid_selection = ''
         self.publish_message(text='Select Fits File')
 
     def initilize_plot_table(self):
@@ -795,8 +813,10 @@ class Interactive(Environment):
         freq_min =  float(self.env.frequency_minimum_text.value)
         freq_max =  float(self.env.frequency_maximum_text.value)
         data = data.query('freq>@freq_min & freq<@freq_max')
+        
         freq = data.freq.values
         power = data.psd.values
+        print('frequecny calculation', freq)
         name= 'Obs'
         self.add_plot_other_periodogram(freq = freq, 
                                         power= power,
@@ -843,12 +863,28 @@ class Interactive(Environment):
     def add_plot_other_periodogram(self,freq =None,power= None,
                                    name= None, color = None ):        
         
-        self.env.fig_other_periodogram.line(freq, power,
-                           name=name,
-                            alpha=0.7, color=color)  
-        self.env.fig_other_periodogram.select(name).visible = False
+        # self.env.fig_other_periodogram.line(freq, power,
+        #                    name=name,
+        #                     alpha=0.7, color=color)  
+        # self.env.fig_other_periodogram.select(name).visible = False
 
+        existing_line = None
+        for renderer in self.env.fig_other_periodogram.renderers:
+            if hasattr(renderer, 'name') and renderer.name == name:
+                existing_line = renderer
+                break
 
+        if existing_line:
+            # Update the existing line's data source
+            existing_line.data_source.data['x'] = freq
+            existing_line.data_source.data['y'] = power
+            existing_line.data_source.trigger('data', existing_line.data_source.data, existing_line.data_source.data)
+        else:
+            # Create a new line
+            self.env.fig_other_periodogram.line(freq, power, name=name, alpha=0.7, color=color)
+
+        # Assuming you still want to set the visibility to False
+        self.env.fig_other_periodogram.select(name=name).visible = False
 
 
     def update_value(self):
@@ -885,17 +921,19 @@ class Interactive(Environment):
             self.env.frequency_minimum_text.value)
         self.env.maximum_frequency = float(
             self.env.frequency_maximum_text.value)
-
+        self.grid_selection = self.env.select_grid_menu.value
         if  (self.env.minimum_frequency == self.old_frequency_min) and (
-            self.env.maximum_frequency == self.old_frequency_max):
-            print('No change in Min and Max Freq Cuttoff')
+            self.env.maximum_frequency == self.old_frequency_max) and (
+            self.grid_selection == self.old_grid_selection) :
+            print('No change in Min and Max Freq Cuttoff or Grid')
             value = False
         else:
-            print('Change in Frequency')
+            print('Change in Frequency or Grid')
             value = True
             
         self.old_frequency_min = self.env.minimum_frequency
         self.old_frequency_max = self.env.maximum_frequency
+        self.old_grid_selection = self.grid_selection
 
         return value
 
@@ -926,16 +964,19 @@ class Interactive(Environment):
                 
             if self.env.check_reverse_color_palette.active[0]!=1:
                 self.palette = list(reversed(self.palette))
-        color_mapper = LogColorMapper(palette=self.palette, low=lo, high=hi)
-        self.env.fig_tpfint.select(
-            'img').glyph.color_mapper.low = color_mapper.low
-        self.env.fig_tpfint.select(
-            'img').glyph.color_mapper.high = color_mapper.high
-        self.env.fig_tpfint.select(
-            'img').glyph.color_mapper.palette = getattr(color_mapper,'palette')
-        self.env.stretch_sliderint.start = vlo
-        self.env.stretch_sliderint.end = vhi
-        self.env.stretch_sliderint.value = (lo, hi)
+        # Lock color mapper
+        if self.env.check_color_map_lock.active[0]==1:
+            print('Value of colormap check',self.env.check_color_map_lock.active[0])
+            color_mapper = LogColorMapper(palette=self.palette, low=lo, high=hi)
+            self.env.fig_tpfint.select(
+                'img').glyph.color_mapper.low = color_mapper.low
+            self.env.fig_tpfint.select(
+                'img').glyph.color_mapper.high = color_mapper.high
+            self.env.fig_tpfint.select(
+                'img').glyph.color_mapper.palette = getattr(color_mapper,'palette')
+            self.env.stretch_sliderint.start = vlo
+            self.env.stretch_sliderint.end = vhi
+            self.env.stretch_sliderint.value = (lo, hi)
         self.env.dnu_slider.start = 0.01
         self.env.dnu_slider.end = self.env.maxdnu
         if self.env.check_show_horizontal_lines.active[0]==0:
@@ -978,16 +1019,18 @@ class Interactive(Environment):
                 
                 if self.env.check_reverse_color_palette.active[0]!=1:
                     self.palette = list(reversed(self.palette))
-                color_mapper = LogColorMapper(palette=self.palette, low=lo, high=hi)
-                self.env.fig_tpfint.select(
-                    'img').glyph.color_mapper.low = color_mapper.low
-                self.env.fig_tpfint.select(
-                    'img').glyph.color_mapper.high = color_mapper.high
-                self.env.fig_tpfint.select(
-                    'img').glyph.color_mapper.palette = getattr(color_mapper,'palette')
-                self.env.stretch_sliderint.start = vlo
-                self.env.stretch_sliderint.end = vhi
-                self.env.stretch_sliderint.value = (lo, hi)
+                if self.env.check_color_map_lock.active[0]==1:
+                    print('Value of colormap check',self.env.check_color_map_lock.active[0])                    
+                    color_mapper = LogColorMapper(palette=self.palette, low=lo, high=hi)
+                    self.env.fig_tpfint.select(
+                        'img').glyph.color_mapper.low = color_mapper.low
+                    self.env.fig_tpfint.select(
+                        'img').glyph.color_mapper.high = color_mapper.high
+                    self.env.fig_tpfint.select(
+                        'img').glyph.color_mapper.palette = getattr(color_mapper,'palette')
+                    self.env.stretch_sliderint.start = vlo
+                    self.env.stretch_sliderint.end = vhi
+                    self.env.stretch_sliderint.value = (lo, hi)
                 self.env.dnu_slider.start = 0.01
                 self.env.dnu_slider.end = self.env.maxdnu
             if self.env.check_show_horizontal_lines.active[0]==0:
@@ -1357,8 +1400,8 @@ class Interactive(Environment):
                                      title='',
                                      value=(lo, hi),
                                     #  orientation='vertical',
-                                    # width=200,
-                                    # height=10,
+                                    width=700,
+                                    height=50,
                                      direction='ltr',
                                     # css_classes=["custom- slider"],
                                      show_value=True,
@@ -2423,3 +2466,24 @@ class Interactive(Environment):
             print('PKB file saved to ',file_name)
             fulltext='PKB file saved to '+file_name+': Ready'
             self.publish_message(text=fulltext)
+
+    def toggle_periodogram_axis_scale(self, attr, old, new):
+
+        print('Changing scale')
+        from bokeh.models import Range1d, LogScale, LinearScale
+
+        if 0 in new:
+            # Set to logarithmic scale
+            self.env.fig_other_periodogram.y_range = Range1d(start=0.1, end=10, bounds="auto")
+            self.env.fig_other_periodogram.x_range = Range1d(start=0.1, end=10, bounds="auto")
+            self.env.fig_other_periodogram.y_scale = LogScale()
+            self.env.fig_other_periodogram.x_scale = LogScale()
+        else:
+            # Set to linear scale
+            self.env.fig_other_periodogram.y_range = Range1d(start=0, end=10, bounds="auto")
+            self.env.fig_other_periodogram.x_range = Range1d(start=0, end=10, bounds="auto")
+            self.env.fig_other_periodogram.y_scale = LinearScale()
+            self.env.fig_other_periodogram.x_scale = LinearScale()
+
+        #self.env.fig_other_periodogram.reset.emit()
+
