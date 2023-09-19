@@ -84,12 +84,13 @@ layout_catalog = column(
         column(
             env.fig_other_periodogram, 
             row(
-                env.check_periodogram_axis_scale,
+                #env.check_periodogram_axis_scale,
                 env.inverted_slider,
                 env.inverted_line_initial_y_text,
                 env.inverted_line_length_text,
                 env.inverted_line_scale_text,
                 env.inverted_line_xvalue_text,
+                env.inverted_slider_max_value_text,
                 env.check_show_inverted_lines,
                 env.inverted_line_update_button,
             ),

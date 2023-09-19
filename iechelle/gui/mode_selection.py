@@ -268,6 +268,9 @@ class Interactive(Environment):
             self.update_inverted_line)
 
 
+        self.env.inverted_slider_max_value_text = TextInput(
+            value=str(400), title="Max x Value", width=50)
+
         #self.update_selection_tables()
         
         self.env.tb_source.on_change('data',self.update_whole_plot)
@@ -1261,8 +1264,9 @@ class Interactive(Environment):
     def inverted_slider(self):
         
         if self.env.inverted_slider ==None:
-            self.env.inverted_slider = Slider(start=-200,
-                                            end=200,
+            sld_val = float(self.env.inverted_slider_max_value_text.value)
+            self.env.inverted_slider = Slider(start=-1*sld_val,
+                                            end=sld_val,
                                             value=0,
                                             step=1,
                                             title="Inverted Slider",
@@ -1319,6 +1323,11 @@ class Interactive(Environment):
         """
         Update inverted line
         """ 
+        sld_val = float(self.env.inverted_slider_max_value_text.value)
+        self.env.inverted_slider.start = -1*sld_val
+        self.env.inverted_slider.end = 1*sld_val
+
+
         df_second=self.tb_se_second_source.to_df()
         df_second['initial_y'] = float(self.env.inverted_line_initial_y_text.value)
         length=float(self.env.inverted_line_length_text.value)
@@ -2469,7 +2478,7 @@ class Interactive(Environment):
 
     def toggle_periodogram_axis_scale(self, attr, old, new):
 
-        print('Changing scale')
+        print('Changing periodogram scale: Not working')
         from bokeh.models import Range1d, LogScale, LinearScale
 
         if 0 in new:

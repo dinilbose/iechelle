@@ -298,6 +298,7 @@ class Environment(object):
     check_show_echelle = None
     check_show_modes_grid = None
     check_reverse_color_palette = None
+    inverted_slider_max_value_text = None
     default_color_palette = "Greys"
     color_palette_options = [
         "Spectral",
