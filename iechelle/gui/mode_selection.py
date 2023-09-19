@@ -338,7 +338,7 @@ class Interactive(Environment):
 
         self.env.minimum_frequency = 1  # 1
         self.env.maximum_frequency = 8000  # 8000
-        self.env.maxdnu = 50
+        self.env.maxdnu = 100
         self.env.dnu_val = 24.8
 
         f = (ff*u.Hz).to(self.env.frequency_unit)
@@ -2191,8 +2191,13 @@ class Interactive(Environment):
     def load_pkb_to_second_tab(self,file_name):
         "Loads pkb and return df for second tab"
         pkb_array = apol.peakbagging.fit_tools.read_pkb(file_name)
-        pkb_array = pkb_array.reshape(-1, len(self.env.pkb_columns))
-        df_pkb = pd.DataFrame(pkb_array,columns=self.env.pkb_columns)
+        if pkb_array.shape[1]==20:
+            print('Using extended PKB array')
+            pkb_array = pkb_array.reshape(-1, len(self.env.pkb_columns_extended))
+            df_pkb = pd.DataFrame(pkb_array,columns=self.env.pkb_columns_extended)          
+        else:
+            pkb_array = pkb_array.reshape(-1, len(self.env.pkb_columns))
+            df_pkb = pd.DataFrame(pkb_array,columns=self.env.pkb_columns)
         df_pkb['nu'] = df_pkb['nu'].astype(float).round(4)
 
         df_grid = self.env.tb_grid_source.to_df()
