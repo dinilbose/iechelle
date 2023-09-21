@@ -941,6 +941,8 @@ class Interactive(Environment):
 
         return value
 
+
+
     def update_whole_plot(self,attr, old , new):
         self.trim_frequency()
         self.clear_se_table1()
