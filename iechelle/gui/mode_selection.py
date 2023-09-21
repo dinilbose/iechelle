@@ -9,7 +9,7 @@ from bokeh.models import ColumnDataSource
 import functions
 from astropy import units as u
 # from astropy.units import cds
-
+from tkinter import Tk
 # from lightkurve import MPLSTYLE
 # from lightkurve.seismology import utils, stellar_estimators
 # from lightkurve.periodogram import SNRPeriodogram
@@ -266,21 +266,54 @@ class Interactive(Environment):
             width=100)
         self.env.inverted_line_update_button.on_click(
             self.update_inverted_line)
-
-
         self.env.inverted_slider_max_value_text = TextInput(
             value=str(400), title="Max x Value", width=50)
 
-        #self.update_selection_tables()
-        
-        self.env.tb_source.on_change('data',self.update_whole_plot)
+        # Adding another fits file
+        self.env.text_extra_plot_x_init = TextInput(
+            value=str(2), title="x init", width=80)
+        self.env.text_extra_plot_x_scale = TextInput(
+            value=str(2), title="y scale", width=80)
+        self.env.text_extra_plot_y_init = TextInput(
+            value=str(2), title="y init", width=80)
+        self.env.text_extra_plot_y_scale = TextInput(
+            value=str(2), title="y scale", width=80)
+        self.env.select_extra_plot_color = Select(
+            title='Color', 
+            options=env.color_list, 
+            value='red',width=150)
+        self.env.open_extra_fits_button = Button(
+            label="Show Plot", button_type=self.env.button_type, width=150)
+        self.env.open_extra_fits_button.on_click(self.open_extra_plot)
 
+
+
+        #self.update_selection_tables()
+        self.env.tb_source.on_change('data',self.update_whole_plot)
         self.plot_vertical_lines()
         self.inverted_slider()
         self.old_frequency_min = 0
         self.old_frequency_max = 0
         self.old_grid_selection = ''
         self.publish_message(text='Select Fits File')
+
+
+    def open_extra_fits_file(self):
+        '''
+        Read extra fits file and do the plot
+        '''
+        root = Tk()
+        root.attributes('-topmost', True)
+        root.withdraw()
+        file = askopenfile()  # blocking
+        if file:
+            file_name = file.name
+            fits_path=os.path.abspath(file_name)
+            ff, pp = self.read_fits_get_fp(filename=fits_path)         
+            
+            ff = (ff*u.Hz).to(self.env.frequency_unit).value
+            pp = pp*self.env.power_unit
+
 
     def initilize_plot_table(self):
         '''
@@ -559,107 +592,6 @@ class Interactive(Environment):
         )
 
 
-
-
-        # Figure 
-        # self.env.fig_tpfint.circle(x='xx', 
-        #                            y='Slicefreq',
-        #                            size=2, 
-        #                            fill_alpha=1,
-        #                            color={'field': 'Mode', 
-        #                                   'transform': color_mapper}, 
-        #                            source=self.tb_se_second_source )
-
-
-
-        # self.mode_color_map
-        # self.env.fig_tpfint.circle(x='xx', y='Slicefreq',size=2, 
-        #                            fill_alpha=0.2,
-        #                            color='mode_color', 
-        #                            source=self.tb_se_second_source )
-
-        # from bokeh.transform import linear_cmap
-        # from bokeh.palettes import Spectral4
-        # self.env.fig_tpfint.circle(x='xx', y='Slicefreq', source=self.tb_se_second_source, 
-        #                            size=10, 
-        #                            color=linear_cmap('Mode', 
-        #                                              palette=Spectral4, 
-        #                                              factors=list(color_map.keys())), 
-        #                                              legend_field='Mode', 
-        #                                              fill_alpha=0.6)
-
-
-
-        # self.env.fig_tpfint.circle(x='xx', y='Slicefreq', source=self.tb_se_second_source, 
-        #                         size=10, 
-        #                         color=linear_cmap('Mode', 
-        #                                             palette=list(color_map.values()), 
-        #                                             factors=list(color_map.keys())), 
-        #                         legend_field='Mode', 
-        #                         fill_alpha=0.6)
-
-    def update_selection_tables(self):
-        # self.env.tb_grid_source.selected.js_on_change(
-        #     "indices",
-        #     CustomJS(
-        #         args=dict(s1=self.env.tb_grid_source,
-        #                   dnu=self.env.dnu_val,
-        #                   s2=self.tb_se_first_source,
-        #                   table=self.env.table_se_first),
-
-        #         code="""
-        #         var inds = cb_obj.indices;
-        #         var d1 = s1.data;
-        #         var d2 = s2.data;
-        #         //d2['SliceFreq'] = []
-        #         //d2['Frequency'] = []
-        #         for (var i = 0; i < inds.length; i++) {
-        #             d2['Slicefreq'].push(d1['yy'][inds[i]])
-        #             d2['Frequency'].push(d1['freq_values'][inds[i]])
-        #             d2['Power'].push(d1['power_values'][inds[i]])
-        #         }
-        #         s2.change.emit();
-        #         table.change.emit();
-
-        #         var inds = source_data.selected.indices;
-        #         var data = source_data.data;
-        #         var out = "x, y\\n";
-        #         for (i = 0; i < inds.length; i++) {
-        #             out += data['x'][inds[i]] + "," + data['y'][inds[i]] + "\\n";
-        #         }
-        #         var file = new Blob([out], {type: 'text/plain'});
-
-        #     """,
-        #     ),
-        # )
-        print('Commented')
-        # self.env.tb_grid_source.selected.on_change(
-        #     'indices', self.selection_grid_to_prd_fig)
-
-        # self.env.tb_other_periodogram.selected.on_change(
-        #     'indices', self.selection_prd_to_grid_fig)
-        
-        # self.env.tb_grid_source.selected.on_change(
-        #     'indices', self.selection_grid_to_table_fig)
-
-
-        # self.env.tb_grid_source.selected.on_change(
-        #     'indices', self.selection_grid_to_table_fig)
-
-        # self.env.tb_grid_source.selected.on_change(
-        #     'indices', self.selection_table_to_prd_fig)
-
-        # self.env.tb_other_periodogram.selected.on_change(
-        #     'indices', self.selection_prd_to_grid_fig)
-        # print('Nothing')
-
-
-
-        
-
-
-
-
     def make_grid(self):
         '''
 
@@ -701,28 +633,6 @@ class Interactive(Environment):
                                         **self.env.selection)
 
 
-
-
-
-                # color_mapper = CategoricalColorMapper(
-                #     factors=list(color_map.keys()), 
-                #     palette=list(color_map.values()))
-                
-                # self.env.fig_tpfint.circle(x='xx', y='yy',
-                #                            size=2, 
-                #                            fill_alpha=0.2, 
-                #                            line_color='blue', 
-                #                            source=self.env.tb_grid_source)
-
-                # self.env.fig_tpfint.circle(x = 'xx', 
-                #                            y = 'yy',
-                #                            size = 2, 
-                #                            fill_alpha = 0.2, 
-                #                            color = {'field': 'Mode', 
-                #                                   'transform': color_mapper}, 
-                #                            source=self.env.tb_grid_source)
-                
-        #print('Griding',self.env.check_make_grid.active)
         if self.env.check_make_grid.active[0]==0 and not self.env.tb_other_periodogram.to_df().empty:
             cutt_off = float(self.env.echelle_noise_cuttoff_text.value)
             self.tb_constants_val.data['other_prd_cuttoff'] = list([cutt_off])
@@ -758,8 +668,6 @@ class Interactive(Environment):
                 old_data=ColumnDataSource(df_grid.to_dict('list'))
                 self.env.tb_grid_source.data = dict(old_data.data)
 
-
-
         else:
             old_data = ColumnDataSource(
                 data=dict(
@@ -772,19 +680,19 @@ class Interactive(Environment):
             )
             self.env.tb_grid_source.data = dict(old_data.data)
 
-    def read_fits_get_fp(self):
+
+    def read_fits_get_fp(self,filename=None):
         '''
         Test function: Read fits file and get f and p"
         '''
-        self.publish_message(text='Reading Fits')
         ff = np.array([])
         pp = np.array([])
-        id_mycatalog=self.env.tb_source.data['id_mycatalog'][0]
-        # self.id_mycatalog = id_mycatalog
-        # filename=mycatalog.filename(
-        #     id_mycatalog=id_mycatalog,
-        #     name='other_psd')
-        filename =Path(self.env.tb_source.data['path_fits'][0])
+        if not filename==None:
+            self.publish_message(text='Reading Fits')
+            id_mycatalog=self.env.tb_source.data['id_mycatalog'][0]
+            filename =Path(self.env.tb_source.data['path_fits'][0])
+        else:
+            self.publish_message(text='Reading Extra Fits')
         print('Running read fits',filename)
         if filename.is_file():
             from astropy.io import fits
@@ -804,6 +712,7 @@ class Interactive(Environment):
         self.publish_message(text='Read Fits')
 
         return ff, pp
+
 
     def calculate_synthetic_psd(self):
         self.publish_message('Calculating Synthetic Spectra; Busy')

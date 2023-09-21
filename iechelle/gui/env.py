@@ -331,6 +331,8 @@ class Environment(object):
         "Turbo256",
     ]
 
+    all_color = 
+
     pkb_columns=['n', 'l', 'nu', 'e_nu', 'h', 'e_h', 'w', 'e_w', 'a', 'e_a', 's', 'e_s', 'asym', 'e_asym']
     pkb_columns_extended = [
                                 'n', 'l', 'nu', 'err_nu_minus', 'err_nu_plus', 
@@ -370,13 +372,61 @@ class Environment(object):
     table_plot = None
     select_grid_menu = None
     show_plot = None
+
+
+
+
+
+    color_list = [
+                'red', 'blue', 'green', 'yellow', 'black',
+                'white', 'orange', 'purple', 'pink', 'brown',
+                'gray', 'cyan', 'magenta', 'lime', 'maroon',
+                'navy', 'olive', 'teal', 'violet', 'indigo',
+                'gold', 'silver', 'beige', 'tan', 'coral',]
+
+
+
+
+
+
+
+
+    # color_list = [
+    #     'aliceblue', 'antiquewhite', 'aqua', 'aquamarine', 'azure',
+    #     'beige', 'bisque', 'black', 'blanchedalmond', 'blue',
+    #     'blueviolet', 'brown', 'burlywood', 'cadetblue', 'chartreuse',
+    #     'chocolate', 'coral', 'cornflowerblue', 'cornsilk', 'crimson',
+    #     'cyan', 'darkblue', 'darkcyan', 'darkgoldenrod', 'darkgray',
+    #     'darkgreen', 'darkgrey', 'darkkhaki', 'darkmagenta', 'darkolivegreen',
+    #     'darkorange', 'darkorchid', 'darkred', 'darksalmon', 'darkseagreen',
+    #     'darkslateblue', 'darkslategray', 'darkslategrey', 'darkturquoise', 'darkviolet',
+    #     'deeppink', 'deepskyblue', 'dimgray', 'dimgrey', 'dodgerblue',
+    #     'firebrick', 'floralwhite', 'forestgreen', 'fuchsia', 'gainsboro',
+    #     'ghostwhite', 'gold', 'goldenrod', 'gray', 'green',
+    #     'greenyellow', 'grey', 'honeydew', 'hotpink', 'indianred',
+    #     'indigo', 'ivory', 'khaki', 'lavender', 'lavenderblush',
+    #     'lawngreen', 'lemonchiffon', 'lightblue', 'lightcoral', 'lightcyan',
+    #     'lightgoldenrodyellow', 'lightgray', 'lightgreen', 'lightgrey', 'lightpink',
+    #     'lightsalmon', 'lightseagreen', 'lightskyblue', 'lightslategray', 'lightslategrey',
+    #     'lightsteelblue', 'lightyellow', 'lime', 'limegreen', 'linen',
+    #     'magenta', 'maroon', 'mediumaquamarine', 'mediumblue', 'mediumorchid',
+    #     'mediumpurple', 'mediumseagreen', 'mediumslateblue', 'mediumspringgreen', 'mediumturquoise',
+    #     'mediumvioletred', 'midnightblue', 'mintcream', 'mistyrose', 'moccasin',
+    #     'navajowhite', 'navy', 'oldlace', 'olive', 'olivedrab',
+    #     'orange', 'orangered', 'orchid', 'palegoldenrod', 'palegreen',
+    #     'paleturquoise', 'palevioletred', 'papayawhip', 'peachpuff', 'peru',
+    #     'pink', 'plum', 'powderblue', 'purple', 'rebeccapurple',
+    #     'red', 'rosybrown', 'royalblue', 'saddlebrown', 'salmon',
+    #     'sandybrown', 'seagreen', 'seashell', 'sienna', 'silver',
+    #     'skyblue', 'slateblue', 'slategray', 'slategrey', 'snow',
+    #     'springgreen', 'steelblue', 'tan', 'teal', 'thistle',
+    #     'tomato', 'turquoise', 'violet', 'wheat', 'white',
+    #     'whitesmoke', 'yellow', 'yellowgreen'
+    # ]
+
+    
     # selected_filename = None
     # selected_filename = None
-
-
-
-
-
     # update_all=None
     # from bokeh.models.widgets import  Div
     # self.env.div_spinner = Div(text="",width=120,height=120)
