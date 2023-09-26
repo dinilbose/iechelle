@@ -270,21 +270,28 @@ class Interactive(Environment):
             value=str(400), title="Max x Value", width=50)
 
         # Adding another fits file
+        self.env.text_extra_plot_name = TextInput(
+            value=str(2), title="Name", width=80)
         self.env.text_extra_plot_x_init = TextInput(
             value=str(2), title="x init", width=80)
         self.env.text_extra_plot_x_scale = TextInput(
-            value=str(2), title="y scale", width=80)
+            value=str(2), title="x scale", width=80)
         self.env.text_extra_plot_y_init = TextInput(
             value=str(2), title="y init", width=80)
         self.env.text_extra_plot_y_scale = TextInput(
             value=str(2), title="y scale", width=80)
         self.env.select_extra_plot_color = Select(
+            title='Style', 
+            options=['line', 'circle'], 
+            value='line',
+            width=150)
+        self.env.select_extra_plot_color = Select(
             title='Color', 
-            options=env.color_list, 
+            options=self.env.color_list, 
             value='red',width=150)
         self.env.open_extra_fits_button = Button(
-            label="Show Plot", button_type=self.env.button_type, width=150)
-        self.env.open_extra_fits_button.on_click(self.open_extra_plot)
+            label="Get fits", button_type=self.env.button_type, width=150)
+        self.env.open_extra_fits_button.on_click(self.open_extra_fits_file)
 
 
 
@@ -297,6 +304,69 @@ class Interactive(Environment):
         self.old_grid_selection = ''
         self.publish_message(text='Select Fits File')
 
+    def plot_extra_function(self,
+                        filename = None,
+                        x_data = None,
+                        y_data = None,
+                        name = None,
+                        style = None, 
+                        x_init= None, 
+                        x_scale = None, 
+                        y_init = None, 
+                        y_scale = None,
+                        color = None ):
+        '''
+        This function plots and replots what ever the inputs
+        '''
+        
+        #self.env.fig_other_periodogram.select(name).visible = False
+
+        fits_path = filename
+        
+        ff, pp = self.read_fits_get_fp(filename=fits_path)         
+        ff = (ff*u.Hz).to(self.env.frequency_unit).value
+        pp = pp*self.env.power_unit.value
+
+        freq = x_init + ff * x_scale
+        power = y_init + pp * y_scale
+        
+        self.add_plot_other_periodogram(freq =freq, 
+                                        power = power,
+                                        name = name, 
+                                        style = style,
+                                        color = color, 
+                                        visible = True)
+        
+
+               
+    def plot_extra_plot(self):
+        '''
+        This function facilatate plot extra button
+        '''
+
+        # filename = 
+        # x_data = 
+        # y_data = 
+        # name =  
+        # x_init=  
+        # x_scale =  
+        # y_init =  
+        # y_scale =
+        # color =  
+        self.plot_extra_function(
+                            filename = self.env.text_extra_plot_file_name,
+                            x_data = None,
+                            y_data = None,
+                            name = self.env.text_extra_plot_name.text,
+                            type = self.env.text_extra_plot_style.value, 
+                            x_init= float(self.env.text_extra_plot_x_init.text), 
+                            x_scale = float(self.env.text_extra_plot_x_scale.text), 
+                            y_init = float(self.env.text_extra_plot_y_init.text), 
+                            y_scale = float(self.env.text_extra_plot_y_scale.text),
+                            color = float(self.env.select_extra_plot_color.value), 
+                            )
+
+
 
     def open_extra_fits_file(self):
         '''
@@ -308,11 +378,35 @@ class Interactive(Environment):
         file = askopenfile()  # blocking
         if file:
             file_name = file.name
-            fits_path=os.path.abspath(file_name)
-            ff, pp = self.read_fits_get_fp(filename=fits_path)         
-            
-            ff = (ff*u.Hz).to(self.env.frequency_unit).value
-            pp = pp*self.env.power_unit
+            name = Path(file_name).stem
+            self.env.text_extra_plot_name.text = name
+            self.env.text_extra_plot_file_name = file_name            
+
+
+    def add_rows_to_tb_plot(self, 
+                            name=None,
+                            style=None,
+                            color=None,
+                            x_init=None,
+                            y_init=None,
+                            x_scale=None,
+                            y_scale=None,
+                            visible=None):
+        
+
+        new_data=dict(
+            name=list([name]), 
+            style=list([style]), 
+            color = list([color]),
+            x_init = list([x_init]),
+            y_init = list([y_init]),
+            x_scale = list([x_scale]),
+            y_scale = list([y_scale]),
+            )
+        for column, values in new_data.items():
+            self.env.tb_plot.data[column].extend(values)
+
+        self.env.tb_plot.data = dict(self.env.tb_plot.data)
 
 
     def initilize_plot_table(self):
@@ -323,12 +417,20 @@ class Interactive(Environment):
 
         self.env.tb_plot = ColumnDataSource(
             data=dict(
-                name=list(['Grid']), colour = list(['grey'])
+                name=list(['Grid']), 
+                style=list(['both']), 
+                color = list(['grey']),
+                x_init = list(['0']),
+                y_init = list(['0']),
+                x_scale = list(['1']),
+                y_scale = list(['1']),
             ))
     
         columns = [
             TableColumn(field="name", title="Name"),
-            TableColumn(field="colour", title="Colour"),
+            TableColumn(field="color", title="Color"),
+            TableColumn(field="style", title="Style"),
+
         ]
 
         self.env.table_plot = DataTable(
@@ -422,12 +524,12 @@ class Interactive(Environment):
                                      alpha=0.7, 
                                      color = {'field': 'Mode', 
                                                 'transform': color_mapper},
-                                     **self.env.selection,name='Grid'
+                                     **self.env.selection,name='Grid_both'
                                      )
 
         fig_other_periodogram.line("frequency", "power",
                                    source=tb_other_periodogram,
-                                   alpha=0.7, color="grey",name='Grid')
+                                   alpha=0.7, color="grey",name='Grid_both')
         #color="#1F77B4"
         fig_other_periodogram.ray(
             y="other_prd_cuttoff",
@@ -681,25 +783,26 @@ class Interactive(Environment):
             self.env.tb_grid_source.data = dict(old_data.data)
 
 
-    def read_fits_get_fp(self,filename=None):
+    def read_fits_get_fp(self, filename=None):
         '''
         Test function: Read fits file and get f and p"
         '''
         ff = np.array([])
         pp = np.array([])
-        if not filename==None:
+        if filename==None:
             self.publish_message(text='Reading Fits')
             id_mycatalog=self.env.tb_source.data['id_mycatalog'][0]
-            filename =Path(self.env.tb_source.data['path_fits'][0])
+            path_fits =Path(self.env.tb_source.data['path_fits'][0])
         else:
             self.publish_message(text='Reading Extra Fits')
-        print('Running read fits',filename)
-        if filename.is_file():
+            path_fits = Path(filename)
+        print('Running read fits',path_fits)
+        if path_fits.is_file():
             from astropy.io import fits
             import pandas
             with fits.open(
                 #'/Users/dp275303/work/tessipack_developement_test/PSD_ _no_gap.fits'
-                filename
+                path_fits
                 ) as data:
                 df = pandas.DataFrame(data[0].data)
 
@@ -710,7 +813,6 @@ class Interactive(Environment):
         else:
             print('File does not exist')
         self.publish_message(text='Read Fits')
-
         return ff, pp
 
 
@@ -751,12 +853,12 @@ class Interactive(Environment):
         self.add_plot_other_periodogram(freq = freq, 
                                         power= power,
                                         name= name, 
-                                        color = 'red')
-        old_data=ColumnDataSource(
-        data=dict(
-            name=list(['Grid', 'Obs' ,'Syn', 'Sub']), colour = list(['grey', 'blue', 'green', 'red'])
-        ))
-        self.env.tb_plot.data = dict(old_data.data)
+                                        color = 'red',)
+        # old_data=ColumnDataSource(
+        # data=dict(
+        #     name=list(['Grid', 'Obs' ,'Syn', 'Sub']), colour = list(['grey', 'blue', 'green', 'red'])
+        # ))
+        # self.env.tb_plot.data = dict(old_data.data)
         self.env.tb_plot.selected.indices = [0]
         self.publish_message('Ready')
 
@@ -764,26 +866,32 @@ class Interactive(Environment):
 
     def show_plot(self):
         df = self.env.tb_plot.to_df() 
-        for name in df['name']:
+        df['full_name']=df['name']+'_'+df['style']
+        for name in df['full_name']:
             self.env.fig_other_periodogram.select(name).visible = False
         ind =self.env.tb_plot.selected.indices
         df = df.loc[ind]
         print('df after selection', df)
-        for name in df['name']:
+        for name in df['full_name']:
             self.env.fig_other_periodogram.select(name).visible = True
         print ('Finished')
 
-    def add_plot_other_periodogram(self,freq =None,power= None,
-                                   name= None, color = None ):        
+    def add_plot_other_periodogram(self,freq =None,
+                                   power= None,
+                                   name= None, 
+                                   color = None , 
+                                   style = 'line', 
+                                   visible = False):        
         
         # self.env.fig_other_periodogram.line(freq, power,
         #                    name=name,
         #                     alpha=0.7, color=color)  
         # self.env.fig_other_periodogram.select(name).visible = False
 
+        plot_name = name + '_' + style
         existing_line = None
         for renderer in self.env.fig_other_periodogram.renderers:
-            if hasattr(renderer, 'name') and renderer.name == name:
+            if hasattr(renderer, 'name') and renderer.name == plot_name:
                 existing_line = renderer
                 break
 
@@ -794,10 +902,12 @@ class Interactive(Environment):
             existing_line.data_source.trigger('data', existing_line.data_source.data, existing_line.data_source.data)
         else:
             # Create a new line
-            self.env.fig_other_periodogram.line(freq, power, name=name, alpha=0.7, color=color)
+            self.env.fig_other_periodogram.line(freq, power, name=plot_name, alpha=0.7, color=color)
 
         # Assuming you still want to set the visibility to False
-        self.env.fig_other_periodogram.select(name=name).visible = False
+        self.env.fig_other_periodogram.select(name=plot_name).visible = visible
+        self.add_rows_to_tb_plot( name=name, color=color, style=style, visible = True)
+
 
 
     def update_value(self):
@@ -867,6 +977,7 @@ class Interactive(Environment):
         self.make_tb_echelle_diagram()
 
         ep = self.env.tb_echelle_diagram.data['image']*self.env.power_unit
+        print ('ep', ep)
         lo, hi = np.nanpercentile(ep.value, [0.1, 99.9])
         vlo, vhi = 0.3 * lo, 1.7 * hi
         vstep = (lo - hi)/500

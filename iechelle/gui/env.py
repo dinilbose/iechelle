@@ -331,7 +331,7 @@ class Environment(object):
         "Turbo256",
     ]
 
-    all_color = 
+    #all_color = 
 
     pkb_columns=['n', 'l', 'nu', 'e_nu', 'h', 'e_h', 'w', 'e_w', 'a', 'e_a', 's', 'e_s', 'asym', 'e_asym']
     pkb_columns_extended = [
@@ -373,9 +373,15 @@ class Environment(object):
     select_grid_menu = None
     show_plot = None
 
-
-
-
+    # Buttons for adding extra plot
+    text_extra_plot_name = None
+    text_extra_plot_file_name = None
+    text_extra_plot_x_init = None
+    text_extra_plot_x_scale = None
+    text_extra_plot_y_init = None
+    text_extra_plot_y_scale = None
+    select_extra_plot_color = None
+    open_extra_fits_button = None    
 
     color_list = [
                 'red', 'blue', 'green', 'yellow', 'black',
