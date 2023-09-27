@@ -431,8 +431,8 @@ class Interactive(Environment):
 
 
     def add_rows_to_tb_plot(self,
-                            filename = None,
-                            category=None, 
+                            filename=None,
+                            category=None,
                             fig_name=None,
                             name=None,
                             style=None,
@@ -442,27 +442,39 @@ class Interactive(Environment):
                             x_scale=None,
                             y_scale=None,
                             visible=None):
-        
 
-        new_data=dict(
-            filename = list([filename]),
-            category = list([category]), 
-            fig_name = list([fig_name]),
-            name = list([name]), 
-            style = list([style]), 
-            color = list([color]),
-            x_init = list([x_init]),
-            y_init = list([y_init]),
-            x_scale = list([x_scale]),
-            y_scale = list([y_scale]),
-            visible = [visible],
-            )
-        print('new_data',new_data)
-        for column, values in new_data.items():
-            self.env.tb_plot.data[column].extend(values)
+        # Convert ColumnDataSource to DataFrame
+        df = pd.DataFrame(self.env.tb_plot.data)
 
-        self.env.tb_plot.data = dict(self.env.tb_plot.data)
+        # Create a new DataFrame with the new data
+        new_data = pd.DataFrame({
+            'filename': [filename],
+            'category': [category],
+            'fig_name': [fig_name],
+            'name': [name],
+            'style': [style],
+            'color': [color],
+            'x_init': [x_init],
+            'y_init': [y_init],
+            'x_scale': [x_scale],
+            'y_scale': [y_scale],
+            'visible': [visible]
+        })
 
+        # Query to find matching rows
+        query_str = f"category == '{category}' and name == '{name}'"
+        matching_rows = df.query(query_str)
+
+        if not matching_rows.empty:
+            # If matching row exists, update it
+            idx = matching_rows.index[0]
+            df.loc[idx] = new_data.loc[0]
+        else:
+            # If no matching row exists, append the new row using pd.concat
+            df = pd.concat([df, new_data], ignore_index=True)
+
+        # Update the ColumnDataSource with the modified DataFrame
+        self.env.tb_plot.data = df.to_dict(orient='list')
 
     def initilize_plot_table(self):
         '''
@@ -996,6 +1008,8 @@ class Interactive(Environment):
             existing_line.data_source.data['x'] = freq
             existing_line.data_source.data['y'] = power
             existing_line.data_source.trigger('data', existing_line.data_source.data, existing_line.data_source.data)
+            existing_line.glyph.line_color = color
+        
         else:
             # Create a new line
             self.env.fig_other_periodogram.line(freq, power, name=plot_name, alpha=0.7, color=color)
