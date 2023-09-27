@@ -382,7 +382,9 @@ class Environment(object):
     text_extra_plot_y_scale = None
     select_extra_plot_color = None
     open_extra_fits_button = None    
-
+    select_extra_plot_style = None
+    open_extra_get_info_button = None
+    open_extra_plot_button = None
     color_list = [
                 'red', 'blue', 'green', 'yellow', 'black',
                 'white', 'orange', 'purple', 'pink', 'brown',

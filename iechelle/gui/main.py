@@ -56,14 +56,25 @@ tab_int_1 = column(
 
 
 tab_interactive_layout = column(row(tab_int_1))
-
-
 next_lay1 = row(env.previous_button,
                 env.next_button)
-
 next_dflt_lay = column(next_lay1)
-
 layer_1 = column(next_dflt_lay)
+extra_plot_lay = row( 
+env.open_extra_fits_button,
+env.text_extra_plot_name,
+env.text_extra_plot_x_init,
+env.text_extra_plot_x_scale,
+env.text_extra_plot_y_init,
+env.text_extra_plot_y_scale,
+env.select_extra_plot_color,
+env.select_extra_plot_style,
+env.open_extra_get_info_button,
+env.open_extra_plot_button,
+)
+
+
+
 
 layout_catalog = column(
     row(
@@ -94,6 +105,7 @@ layout_catalog = column(
                 env.check_show_inverted_lines,
                 env.inverted_line_update_button,
             ),
+        extra_plot_lay,
 
             row(
                 column(
@@ -132,6 +144,7 @@ layout_catalog = column(
                                 ),
 
     ),
+
     # column(
     #     Div(text="<h2 style='text-align: center;'> FITS:", width=500),env.selected_filename_text,
     #     env.selected_filename_pkb_text,

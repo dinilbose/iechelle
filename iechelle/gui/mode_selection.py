@@ -280,9 +280,9 @@ class Interactive(Environment):
             value=str(2), title="y init", width=80)
         self.env.text_extra_plot_y_scale = TextInput(
             value=str(2), title="y scale", width=80)
-        self.env.select_extra_plot_color = Select(
+        self.env.select_extra_plot_style = Select(
             title='Style', 
-            options=['line', 'circle'], 
+            options=['line', 'circle','both'], 
             value='line',
             width=150)
         self.env.select_extra_plot_color = Select(
@@ -292,6 +292,12 @@ class Interactive(Environment):
         self.env.open_extra_fits_button = Button(
             label="Get fits", button_type=self.env.button_type, width=150)
         self.env.open_extra_fits_button.on_click(self.open_extra_fits_file)
+        self.env.open_extra_get_info_button = Button(
+            label="Get info", button_type=self.env.button_type, width=150)
+        self.env.open_extra_get_info_button.on_click(self.get_plot_info)
+        self.env.open_extra_plot_button = Button(
+            label="Plot", button_type=self.env.button_type, width=150)
+        self.env.open_extra_plot_button.on_click(self.plot_extra_plot)
 
 
 
@@ -306,6 +312,8 @@ class Interactive(Environment):
 
     def plot_extra_function(self,
                         filename = None,
+                        fig_name = None,
+                        category = None,
                         x_data = None,
                         y_data = None,
                         name = None,
@@ -325,20 +333,57 @@ class Interactive(Environment):
         
         ff, pp = self.read_fits_get_fp(filename=fits_path)         
         ff = (ff*u.Hz).to(self.env.frequency_unit).value
-        pp = pp*self.env.power_unit.value
+        pp = (pp*self.env.power_unit).value
 
         freq = x_init + ff * x_scale
         power = y_init + pp * y_scale
         
-        self.add_plot_other_periodogram(freq =freq, 
+        self.add_plot_other_periodogram(category = category,
+                                        fig_name = fig_name,
+                                        filename=fits_path,
+                                        freq =freq, 
                                         power = power,
                                         name = name, 
                                         style = style,
                                         color = color, 
-                                        visible = True)
+                                        visible = True,
+                                        x_init= x_init,
+                                        y_init= y_init,
+                                        x_scale=x_scale,
+                                        y_scale=y_scale,)
         
 
-               
+    def get_plot_info(self):
+        '''
+        This function get the information of plot to the input values
+        '''
+        selected=self.tb_plot.selected.indices
+        if len(selected)>0:
+            ind = selected[0]
+            df = self.env.tb_plot.to_df()
+            df = df.loc[ind]
+            print ('Selected', df)
+            if not df.empty:
+                self.env.text_extra_plot_name.value = str(df['name'])
+                self.env.text_extra_plot_x_init.value = str(df['x_init'])
+                self.env.text_extra_plot_x_scale.value = str(df['x_scale'])
+                self.env.text_extra_plot_y_init.value = str(df['y_init'])
+                self.env.text_extra_plot_y_scale.value = str(df['y_scale'])
+                self.env.select_extra_plot_color.value = str(df['color'])
+                self.env.select_extra_plot_style.value = str(df['style'])
+            else:
+                self.env.text_extra_plot_name.value = ""
+                self.env.text_extra_plot_x_init.value = ""
+                self.env.text_extra_plot_x_scale.value = ""
+                self.env.text_extra_plot_y_init.value = ""
+                self.env.text_extra_plot_y_scale.value = ""
+                self.env.select_extra_plot_color.value = ""
+                self.env.select_extra_plot_style.value = ""
+
+        else:
+            print('Nothing selected')
+
+
     def plot_extra_plot(self):
         '''
         This function facilatate plot extra button
@@ -352,18 +397,19 @@ class Interactive(Environment):
         # x_scale =  
         # y_init =  
         # y_scale =
-        # color =  
+        # color =
         self.plot_extra_function(
                             filename = self.env.text_extra_plot_file_name,
+                            category = 'other',
                             x_data = None,
                             y_data = None,
-                            name = self.env.text_extra_plot_name.text,
-                            type = self.env.text_extra_plot_style.value, 
-                            x_init= float(self.env.text_extra_plot_x_init.text), 
-                            x_scale = float(self.env.text_extra_plot_x_scale.text), 
-                            y_init = float(self.env.text_extra_plot_y_init.text), 
-                            y_scale = float(self.env.text_extra_plot_y_scale.text),
-                            color = float(self.env.select_extra_plot_color.value), 
+                            name = self.env.text_extra_plot_name.value,
+                            x_init= float(self.env.text_extra_plot_x_init.value), 
+                            x_scale = float(self.env.text_extra_plot_x_scale.value), 
+                            y_init = float(self.env.text_extra_plot_y_init.value), 
+                            y_scale = float(self.env.text_extra_plot_y_scale.value),
+                            color = self.env.select_extra_plot_color.value, 
+                            style = self.env.select_extra_plot_style.value,
                             )
 
 
@@ -379,11 +425,13 @@ class Interactive(Environment):
         if file:
             file_name = file.name
             name = Path(file_name).stem
-            self.env.text_extra_plot_name.text = name
-            self.env.text_extra_plot_file_name = file_name            
+            self.env.text_extra_plot_name.value = name
+            self.env.text_extra_plot_file_name = file_name 
+            self.publish_message('Extra fits'+self.env.text_extra_plot_file_name)           
 
 
     def add_rows_to_tb_plot(self,
+                            filename = None,
                             category=None, 
                             fig_name=None,
                             name=None,
@@ -397,6 +445,7 @@ class Interactive(Environment):
         
 
         new_data=dict(
+            filename = list([filename]),
             category = list([category]), 
             fig_name = list([fig_name]),
             name = list([name]), 
@@ -408,6 +457,7 @@ class Interactive(Environment):
             y_scale = list([y_scale]),
             visible = [visible],
             )
+        print('new_data',new_data)
         for column, values in new_data.items():
             self.env.tb_plot.data[column].extend(values)
 
@@ -422,6 +472,7 @@ class Interactive(Environment):
 
         self.env.tb_plot = ColumnDataSource(
             data=dict(
+                filename = list(['filename']),
                 fig_name = list(['periodogram']),
                 category = list(['main']),
                 name = list(['Grid']), 
@@ -845,19 +896,27 @@ class Interactive(Environment):
         name= 'Obs'
         category='main'
         fig_name='periodogram'
-        self.add_plot_other_periodogram(freq = freq, 
+        filename = self.env.selected_filename_fits_text.text #main file
+
+        self.add_plot_other_periodogram(filename=filename,
+                                        freq = freq, 
                                         power= power,
                                         name= name,
                                         category = 'main',
                                         fig_name = 'periodogram', 
-                                        color = 'blue')
+                                        color = 'blue',                                        
+                                        y_init=0,
+                                        x_scale=1,
+                                        y_scale=1,
+                                        x_init=0)
 
         freq = data.freq.values
         power = data.synthetic_psd.values
         name= 'Syn'
         category='main'
         fig_name='periodogram'
-        self.add_plot_other_periodogram(freq = freq, 
+        self.add_plot_other_periodogram(filename=filename,
+                                        freq = freq, 
                                         power = power,
                                         name= name,
                                         category = 'main',
@@ -870,7 +929,8 @@ class Interactive(Environment):
         name= 'Sub'
         category='main'
         fig_name='periodogram'
-        self.add_plot_other_periodogram(freq = freq, 
+        self.add_plot_other_periodogram(filename=filename,
+                                        freq = freq, 
                                         power= power,
                                         name= name,
                                         category = 'main',
@@ -888,7 +948,7 @@ class Interactive(Environment):
 
     def show_plot(self):
         df = self.env.tb_plot.to_df() 
-        df['full_name']=df['name']+'_'+df['style']
+        df['full_name']=df['category']+'_'+df['name']+'_'+df['style']
         # for name in df['full_name']:
         #     self.env.fig_other_periodogram.select(name).visible = False
         # ind =self.env.tb_plot.selected.indices
@@ -903,20 +963,27 @@ class Interactive(Environment):
             val = row['visible']
             self.env.fig_other_periodogram.select(name).visible = val
 
-    def add_plot_other_periodogram(self,freq =None,
+    def add_plot_other_periodogram(self,
+                                   category = None,
+                                   filename=None,
+                                   freq =None,
                                    power= None,
                                    fig_name=None,
-                                   category=None,
                                    name= None, 
                                    color = None , 
                                    style = 'line', 
-                                   visible = False):        
+                                   visible = False,
+                                   x_init= 0,
+                                   y_init=0,
+                                   x_scale=1,
+                                   y_scale=1,
+                                   ):        
         
         # self.env.fig_other_periodogram.line(freq, power,
         #                    name=name,
         #                     alpha=0.7, color=color)  
         # self.env.fig_other_periodogram.select(name).visible = False
-
+        print ('all',category,name,style)
         plot_name = category + '_' + name + '_' + style
         existing_line = None
         for renderer in self.env.fig_other_periodogram.renderers:
@@ -935,7 +1002,18 @@ class Interactive(Environment):
 
         # Assuming you still want to set the visibility to False
         self.env.fig_other_periodogram.select(name=plot_name).visible = visible
-        self.add_rows_to_tb_plot(fig_name=fig_name,category=category, name=name, color=color, style=style, visible = True)
+        self.add_rows_to_tb_plot(filename=filename,
+                                 fig_name=fig_name,
+                                 category=category, 
+                                 name=name, 
+                                 color=color, 
+                                 style=style, 
+                                 visible = True,
+                                 x_init=x_init,
+                                 y_init=y_init,
+                                 x_scale=x_scale,
+                                 y_scale=y_scale,
+                                )
 
 
 
