@@ -26,7 +26,7 @@ import apollinaire as apol
 #import Periodo
 from env import Environment
 #from astropy import units
-from bokeh.models import CustomJS, TextInput, Paragraph
+from bokeh.models import CustomJS, TextInput, Paragraph, CheckboxEditor
 # for saving data
 from bokeh.models import Button, Select, CategoricalColorMapper, CheckboxGroup, TableColumn, DataTable
 from lightkurve import periodogram as lk_prd_module
@@ -383,7 +383,9 @@ class Interactive(Environment):
             self.env.text_extra_plot_file_name = file_name            
 
 
-    def add_rows_to_tb_plot(self, 
+    def add_rows_to_tb_plot(self,
+                            category=None, 
+                            fig_name=None,
                             name=None,
                             style=None,
                             color=None,
@@ -395,13 +397,16 @@ class Interactive(Environment):
         
 
         new_data=dict(
-            name=list([name]), 
-            style=list([style]), 
+            category = list([category]), 
+            fig_name = list([fig_name]),
+            name = list([name]), 
+            style = list([style]), 
             color = list([color]),
             x_init = list([x_init]),
             y_init = list([y_init]),
             x_scale = list([x_scale]),
             y_scale = list([y_scale]),
+            visible = [visible],
             )
         for column, values in new_data.items():
             self.env.tb_plot.data[column].extend(values)
@@ -417,19 +422,23 @@ class Interactive(Environment):
 
         self.env.tb_plot = ColumnDataSource(
             data=dict(
-                name=list(['Grid']), 
-                style=list(['both']), 
+                fig_name = list(['periodogram']),
+                category = list(['main']),
+                name = list(['Grid']), 
+                style= list(['both']), 
                 color = list(['grey']),
                 x_init = list(['0']),
                 y_init = list(['0']),
                 x_scale = list(['1']),
                 y_scale = list(['1']),
+                visible = [True]
             ))
     
         columns = [
             TableColumn(field="name", title="Name"),
             TableColumn(field="color", title="Color"),
             TableColumn(field="style", title="Style"),
+            TableColumn(field="visible", title="Visible", editor=CheckboxEditor()),
 
         ]
 
@@ -439,6 +448,7 @@ class Interactive(Environment):
             width=200,
             height=400,
             selectable="checkbox",
+            editable=True,
         )
         self.env.tb_plot.selected.indices = [0]
 
@@ -524,12 +534,12 @@ class Interactive(Environment):
                                      alpha=0.7, 
                                      color = {'field': 'Mode', 
                                                 'transform': color_mapper},
-                                     **self.env.selection,name='Grid_both'
+                                     **self.env.selection,name='main_Grid_both'
                                      )
 
         fig_other_periodogram.line("frequency", "power",
                                    source=tb_other_periodogram,
-                                   alpha=0.7, color="grey",name='Grid_both')
+                                   alpha=0.7, color="grey",name='main_Grid_both')
         #color="#1F77B4"
         fig_other_periodogram.ray(
             y="other_prd_cuttoff",
@@ -833,26 +843,38 @@ class Interactive(Environment):
         power = data.psd.values
         print('frequecny calculation', freq)
         name= 'Obs'
+        category='main'
+        fig_name='periodogram'
         self.add_plot_other_periodogram(freq = freq, 
                                         power= power,
-                                        name= name, 
+                                        name= name,
+                                        category = 'main',
+                                        fig_name = 'periodogram', 
                                         color = 'blue')
 
         freq = data.freq.values
         power = data.synthetic_psd.values
         name= 'Syn'
+        category='main'
+        fig_name='periodogram'
         self.add_plot_other_periodogram(freq = freq, 
                                         power = power,
-                                        name= name, 
+                                        name= name,
+                                        category = 'main',
+                                        fig_name = 'periodogram',  
                                         color = 'green')
         
                 
         freq = data.freq.values
         power = data.sub_psd.values
         name= 'Sub'
+        category='main'
+        fig_name='periodogram'
         self.add_plot_other_periodogram(freq = freq, 
                                         power= power,
-                                        name= name, 
+                                        name= name,
+                                        category = 'main',
+                                        fig_name = 'periodogram', 
                                         color = 'red',)
         # old_data=ColumnDataSource(
         # data=dict(
@@ -867,17 +889,24 @@ class Interactive(Environment):
     def show_plot(self):
         df = self.env.tb_plot.to_df() 
         df['full_name']=df['name']+'_'+df['style']
-        for name in df['full_name']:
-            self.env.fig_other_periodogram.select(name).visible = False
-        ind =self.env.tb_plot.selected.indices
-        df = df.loc[ind]
-        print('df after selection', df)
-        for name in df['full_name']:
-            self.env.fig_other_periodogram.select(name).visible = True
-        print ('Finished')
+        # for name in df['full_name']:
+        #     self.env.fig_other_periodogram.select(name).visible = False
+        # ind =self.env.tb_plot.selected.indices
+        # df = df.loc[ind]
+        # print('Df after selection', df)
+        # for name in df['full_name']:
+        #     self.env.fig_other_periodogram.select(name).visible = True
+        # print ('Finished')
+        print(df)
+        for index, row in df.iterrows():
+            name = row['full_name']
+            val = row['visible']
+            self.env.fig_other_periodogram.select(name).visible = val
 
     def add_plot_other_periodogram(self,freq =None,
                                    power= None,
+                                   fig_name=None,
+                                   category=None,
                                    name= None, 
                                    color = None , 
                                    style = 'line', 
@@ -888,7 +917,7 @@ class Interactive(Environment):
         #                     alpha=0.7, color=color)  
         # self.env.fig_other_periodogram.select(name).visible = False
 
-        plot_name = name + '_' + style
+        plot_name = category + '_' + name + '_' + style
         existing_line = None
         for renderer in self.env.fig_other_periodogram.renderers:
             if hasattr(renderer, 'name') and renderer.name == plot_name:
@@ -906,7 +935,7 @@ class Interactive(Environment):
 
         # Assuming you still want to set the visibility to False
         self.env.fig_other_periodogram.select(name=plot_name).visible = visible
-        self.add_rows_to_tb_plot( name=name, color=color, style=style, visible = True)
+        self.add_rows_to_tb_plot(fig_name=fig_name,category=category, name=name, color=color, style=style, visible = True)
 
 
 
@@ -1673,8 +1702,7 @@ class Interactive(Environment):
 
         freq_ed = freq[:len_slice*n_slice]
         freq_ed = np.reshape(freq_ed, (n_slice, len_slice))
-        # x_freq = freq_ed[0,:] - freq_ed[0,0]
-        x_freq = freq_ed[0, :]
+        x_freq = freq_ed[0, :] - freq_ed[0,0]
         y_freq = freq_ed[:, 0]
 
         # if fig is None :
