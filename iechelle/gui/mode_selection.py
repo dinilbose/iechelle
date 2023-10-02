@@ -335,8 +335,14 @@ class Interactive(Environment):
         ff = (ff*u.Hz).to(self.env.frequency_unit).value
         pp = (pp*self.env.power_unit).value
 
-        freq = x_init + ff * x_scale
-        power = y_init + pp * y_scale
+
+        freq_min =  float(self.env.frequency_minimum_text.value)
+        freq_max =  float(self.env.frequency_maximum_text.value)
+        f = ff[(ff >= freq_min) & (ff <= freq_max)]
+        p = pp[(ff >= freq_min) & (ff <= freq_max)]
+        
+        freq = x_init + f * x_scale
+        power = y_init + p * y_scale
         
         self.add_plot_other_periodogram(category = category,
                                         fig_name = fig_name,
