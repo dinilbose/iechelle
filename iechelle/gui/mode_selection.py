@@ -745,7 +745,7 @@ class Interactive(Environment):
         self.tb_se_second_source = ColumnDataSource(
             data=dict(Slicefreq=[], Frequency=[], Power=[], Mode=[], xx=[], mode_color=[]))
         columns = [
-            TableColumn(field="Slicefreq", title="Slice Freq"),
+            #TableColumn(field="Slicefreq", title="Slice Freq"),
             TableColumn(field="Frequency", title="Frequency"),
             TableColumn(field="Power", title="Power"),
             TableColumn(field="Mode", title="Mode"),
