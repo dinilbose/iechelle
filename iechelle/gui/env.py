@@ -393,9 +393,12 @@ class Environment(object):
                 'gold', 'silver', 'beige', 'tan', 'coral',]
 
 
+    #Other Catalog
 
-
-
+    open_lund_catalog_button = None
+    lund_catalog_full_name = None
+    tb_lund_table1_source = None
+    table_lund_table1 = None
 
 
 

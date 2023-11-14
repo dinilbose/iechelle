@@ -1009,13 +1009,15 @@ class Interactive(Environment):
                 existing_line = renderer
                 break
 
-        if existing_line:
+        if existing_line :
             # Update the existing line's data source
-            existing_line.data_source.data['x'] = freq
-            existing_line.data_source.data['y'] = power
-            existing_line.data_source.trigger('data', existing_line.data_source.data, existing_line.data_source.data)
-            existing_line.glyph.line_color = color
-        
+            if category == "main":
+                print(plot_name,'Print cant add plot name, already exist and its main')
+            else:
+                existing_line.data_source.data['x'] = freq
+                existing_line.data_source.data['y'] = power
+                existing_line.data_source.trigger('data', existing_line.data_source.data, existing_line.data_source.data)
+                existing_line.glyph.line_color = color
         else:
             # Create a new line
             self.env.fig_other_periodogram.line(freq, power, name=plot_name, alpha=0.7, color=color)

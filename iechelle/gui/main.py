@@ -15,6 +15,7 @@ from bokeh.models.layouts import TabPanel, Tabs
 from catalog import Catalog
 from env import Environment
 from mode_selection import Interactive
+from other_catalog import Other_Catalog
 
 env = Environment
 
@@ -22,7 +23,7 @@ env = Environment
 Environment()
 Catalog()
 Interactive()
-
+Other_Catalog()
 
 nxt_prv_button = row(env.next_button, env.previous_button, sizing_mode='fixed')
 
@@ -156,5 +157,15 @@ layout_catalog = column(
 
 # layout_catalog = env.stretch_sliderint
 tab_c = TabPanel(child=layout_catalog, title='Mode Selection')
-tabs = Tabs(tabs=[tab_c])
+
+
+other_catalog_tab = column(
+    row(env.open_lund_catalog_button),
+    env.table_lund_table1,
+    )
+
+other_catalog_panel = TabPanel(child=other_catalog_tab, title='Other')
+
+
+tabs = Tabs(tabs=[tab_c,other_catalog_panel])
 curdoc().add_root(tabs)

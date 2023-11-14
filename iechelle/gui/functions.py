@@ -3,7 +3,17 @@ import apollinaire as apn
 import numpy as np
 import pandas as pd
 from astropy import units as u
-from env import Environment as env
+
+
+import astropy
+from astropy.coordinates import SkyCoord
+import numpy as np
+import pandas as pd
+from scipy import stats
+from astropy.io.fits import Undefined
+from astropy.wcs import WCS
+
+from astropy.io.votable import parse
 
 def calculate_synthetic_spectrum(fits_file=None, bkg_file=None, pkb_file=None, n_harvey=2):
     '''
@@ -45,3 +55,10 @@ def calculate_synthetic_spectrum(fits_file=None, bkg_file=None, pkb_file=None, n
 
 
     
+
+
+def votable_to_pandas(votable_file):
+    print(votable_file)
+    votable = parse(votable_file)
+    table = votable.get_first_table().to_table(use_names_over_ids=True)
+    return table.to_pandas()
