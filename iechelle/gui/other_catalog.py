@@ -26,7 +26,7 @@ from tkinter import Tk
 from tkinter.filedialog import askdirectory, askopenfile, asksaveasfilename
 
 import config as config
-
+import os
 class Other_Catalog(Environment):
     env=Environment
     def __init__(self):
@@ -55,17 +55,20 @@ class Other_Catalog(Environment):
         initiate_lund_catalog
         '''
         #votable_to_pandas('/Users/dp275303/work/Other/iechelle/lund/lund_table1.vot')
+        df = pd.DataFrame()
         if not self.env.lund_catalog_full_name == None:
             
-            df = functions.votable_to_pandas(self.env.lund_catalog_full_name)
-            print(df)
+            if os.path.exists(self.env.lund_catalog_full_name):
+                df = functions.votable_to_pandas(self.env.lund_catalog_full_name)
+                print(df)
 
-            data_dict = {}
+                data_dict = {}
 
-            # Iterate through the columns of the DataFrame and add them to the data dictionary
-            for column_name in df.columns:
-                data_dict[column_name] = df[column_name].tolist()
-
+                # Iterate through the columns of the DataFrame and add them to the data dictionary
+                for column_name in df.columns:
+                    data_dict[column_name] = df[column_name].tolist()
+            else:
+                data_dict = {}
             # Create the ColumnDataSource using the data dictionary
 
         else:
@@ -73,6 +76,20 @@ class Other_Catalog(Environment):
 
 
         self.env.tb_lund_table_source = ColumnDataSource(data=data_dict)
-        columns = [TableColumn(field=col, title=col) for col in df.columns]
-        self.env.table_lund_table1 = DataTable(source=self.env.tb_lund_table_source, columns=columns, width=400, height=400)
+        if not df.empty:
+            columns = [TableColumn(field=col, title=col) for col in df.columns]
+        
+            self.env.table_lund_table1 = DataTable(source=self.env.tb_lund_table_source, columns=columns, width=400, height=400)
+        else:
+            source = ColumnDataSource(data=dict(Column1=[], Column2=[], Column3=[]))
+            source = ColumnDataSource(data=dict(Column1=[], Column2=[], Column3=[]))
+
+            source = ColumnDataSource(data=dict(Column1=[], Column2=[], Column3=[]))
+
+            columns = [TableColumn(field="Column1", title="Column 1"),
+                    TableColumn(field="Column2", title="Column 2"),
+                    TableColumn(field="Column3", title="Column 3")]
+
+            self.env.table_lund_table1 = DataTable(source=source, columns=columns, width=400, height=300)
+
         #print(table_lund_table1)
