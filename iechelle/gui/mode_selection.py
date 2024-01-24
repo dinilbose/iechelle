@@ -2336,8 +2336,14 @@ class Interactive(Environment):
         file_name=data_folder+'/'+'modes_parameter_selected.pkb'
 
         apol.peakbagging.save_pkb(file_name,pkb_array)
+
+        filename_a2z = file_name.replace('.pkb', '.a2z')
+        functions.pkb_to_a2z(file_name,filename_a2z)
+
         print('PKB file saved to ',file_name)
         fulltext='Saving '+ file_name + ' :Ready'
+
+
         self.publish_message(text=fulltext)
 
     def load_pkb_to_second_tab(self,file_name):
@@ -2633,6 +2639,10 @@ class Interactive(Environment):
             apol.peakbagging.save_pkb(file_name,pkb_array)
             print('PKB file saved to ',file_name)
             fulltext='PKB file saved to '+file_name+': Ready'
+            
+            filename_a2z = filename.replace('.pkb', '.a2z')
+            functions.pkb_to_a2z(file_name,filename_a2z)
+
             self.publish_message(text=fulltext)
 
     def toggle_periodogram_axis_scale(self, attr, old, new):
