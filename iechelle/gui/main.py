@@ -159,8 +159,21 @@ layout_catalog = column(
 tab_c = TabPanel(child=layout_catalog, title='Mode Selection')
 
 
+extra_other_plot = row( 
+env.text_extra_plot_name,
+env.text_extra_plot_x_init,
+env.text_extra_plot_x_scale,
+env.text_extra_plot_y_init,
+env.text_extra_plot_y_scale,
+env.select_extra_plot_color,
+env.select_extra_plot_style,
+env.open_extra_get_info_button,
+env.open_extra_plot_button,
+)
+
 other_catalog_tab = column(
-    row(env.open_lund_catalog_button),
+    row(env.open_lund_catalog_button, env.open_lund_catalog_star),
+    row(extra_plot_lay),
     env.table_lund_table1,
     )
 

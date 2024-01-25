@@ -3,7 +3,7 @@ import apollinaire as apn
 import numpy as np
 import pandas as pd
 from astropy import units as u
-
+import glob
 
 import astropy
 from astropy.coordinates import SkyCoord
@@ -169,3 +169,20 @@ def pkb_to_a2z(pkb_filename,A2Z_file,split_incl_flag = 0,split_modesp_flag = 0):
         f.write('a 3 amp_l global 0.2 0.0 0.0 0.05 1.0\n')
         #f.write('a 4 amp_l global 0.05 0.0 1.0 0.0 0.0 0.0 0.0\n')
         #f.write('#----------------------\n')    
+
+
+
+def lund_catalog_fits_filename(kic_id=None, lund_catalog_data_location=None):
+
+    kic_id = str(kic_id).zfill(9)
+    fits_filename = "kplr"+kic_id+'*'+'_COR_PSD_filt_inp.fits'
+    full_filename =  lund_catalog_data_location + fits_filename
+    file_paths = glob.glob(full_filename )
+
+    if file_paths:
+        first_file_path = file_paths[0]  # Get the first file path found
+        print(first_file_path)  # This will print the full file path as a string
+        return first_file_path
+    else:
+        print("No files found matching the pattern.")
+

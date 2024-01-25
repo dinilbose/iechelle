@@ -399,7 +399,8 @@ class Environment(object):
     lund_catalog_full_name = None
     tb_lund_table1_source = None
     table_lund_table1 = None
-
+    lund_catalog_data_location = None
+    lund_catalog_columns = None
 
 
     # color_list = [

@@ -363,7 +363,7 @@ class Interactive(Environment):
         '''
         This function get the information of plot to the input values
         '''
-        selected=self.tb_plot.selected.indices
+        selected=self.env.tb_plot.selected.indices
         if len(selected)>0:
             ind = selected[0]
             df = self.env.tb_plot.to_df()
