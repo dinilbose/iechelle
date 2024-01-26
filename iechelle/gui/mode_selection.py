@@ -271,15 +271,15 @@ class Interactive(Environment):
 
         # Adding another fits file
         self.env.text_extra_plot_name = TextInput(
-            value=str(2), title="Name", width=80)
+            value=str('default'), title="Name", width=80)
         self.env.text_extra_plot_x_init = TextInput(
-            value=str(2), title="x init", width=80)
+            value=str(0), title="x init", width=80)
         self.env.text_extra_plot_x_scale = TextInput(
-            value=str(2), title="x scale", width=80)
+            value=str(1), title="x scale", width=80)
         self.env.text_extra_plot_y_init = TextInput(
-            value=str(2), title="y init", width=80)
+            value=str(0), title="y init", width=80)
         self.env.text_extra_plot_y_scale = TextInput(
-            value=str(2), title="y scale", width=80)
+            value=str(1), title="y scale", width=80)
         self.env.select_extra_plot_style = Select(
             title='Style', 
             options=['line', 'circle','both'], 
