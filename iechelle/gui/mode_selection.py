@@ -1,4 +1,14 @@
-"""Defines the Seismology class."""
+"""
+Defines the Interactive class, the core of iEchelle's interactive analysis functionality.
+
+This module provides the `Interactive` class, which manages the primary user
+interface for echelle diagram and periodogram analysis. It handles user inputs,
+updates Bokeh plots and tables, performs calculations related to seismic mode
+identification, and interacts extensively with the shared `Environment` class.
+It leverages Bokeh for plotting, Astropy for units, Lightkurve for
+periodogram objects, and Apollinaire for some astrophysical calculations
+and echelle diagram logic.
+"""
 import logging
 import pandas as pd
 from pathlib import Path
@@ -52,10 +62,38 @@ from tkinter.filedialog import askdirectory, askopenfile, asksaveasfilename
     
 
 class Interactive(Environment):
+    """
+    Manages the interactive echelle diagram and periodogram analysis GUI.
+
+    This class is responsible for:
+    - Initializing and updating the main periodogram and echelle diagram plots.
+    - Handling user interactions with UI elements (sliders, buttons, tables, text inputs).
+    - Managing Bokeh ColumnDataSources that back the interactive plots and tables.
+    - Reading and processing FITS files to obtain frequency and power data.
+    - Implementing the logic for mode identification, selection, and display.
+    - Facilitating the saving and loading of mode parameters (PKB files).
+    - Calculating and displaying synthetic power spectra.
+    - Interacting with the `apollinaire` library for echelle diagram generation
+      and other astrophysical computations.
+    - Using `tkinter` for file dialogs.
+
+    It inherits from the `Environment` class to access and modify shared application
+    state and Bokeh models.
+    """
     env = Environment
 
     def __init__(self):
+        """
+        Initializes the interactive mode selection GUI components and callbacks.
 
+        Sets up various UI elements including text inputs for frequency ranges,
+        delta Nu, noise cutoff, buttons for plot updates, mode selection,
+        and table operations. Initializes Bokeh ColumnDataSources for periodograms,
+        echelle diagrams, and mode selection tables. Creates the main echelle
+        diagram figure and periodogram figure. Sets up numerous callbacks for
+        UI interactions and data changes.
+        Initializes plot for vertical lines representing selected modes.
+        """
 
         self.mode_color_map = {
                     '999': "grey",
@@ -283,10 +321,14 @@ class Interactive(Environment):
         self.publish_message(text='Select Fits File')
 
     def initilize_plot_table(self):
-        '''
-        This function initialise plot table, later this table will further used for 
-        plotting different test.
-        '''
+        """
+        Initializes the table used for selecting which plots to display.
+
+        This table (`self.env.table_plot`) allows users to toggle the visibility
+        of different datasets on the main periodogram (e.g., observed, synthetic, subtracted).
+        It sets up a `ColumnDataSource` (`self.env.tb_plot`) with default entries
+        like 'Grid' and their associated colors.
+        """
 
         self.env.tb_plot = ColumnDataSource(
             data=dict(
@@ -308,6 +350,19 @@ class Interactive(Environment):
         self.env.tb_plot.selected.indices = [0]
 
     def update_source(self,attr,old,new):
+        """
+        Callback function triggered when the main data source changes.
+        (e.g. a new FITS file is loaded).
+
+        This method re-initializes the periodogram by calling `trim_frequency()`,
+        clears existing mode selection tables (`clear_se_table1`, `clear_se_table2`),
+        and updates the plots via `update_plot()`.
+
+        Args:
+            attr: The attribute that changed (unused).
+            old: The old data (unused).
+            new: The new data (unused).
+        """
         # ff, pp = self.read_fits_get_fp()
         # mm = ['999']*(len(pp))
         # f = (ff*u.Hz).to(self.env.frequency_unit)
@@ -331,9 +386,21 @@ class Interactive(Environment):
 
 
     def initialize_dnu_periodogram(self):
-        '''
-        Function initialise the the dnu periodogram table source and also the periodogram graph
-        '''
+        """
+        Initializes the main periodogram figure and its associated ColumnDataSource.
+
+        Reads frequency and power data from a FITS file (via `read_fits_get_fp`).
+        Sets default frequency ranges, delta Nu, and other parameters.
+        Creates a Bokeh figure for the periodogram with tools for zoom, selection, etc.
+        Creates a `ColumnDataSource` (`tb_other_periodogram`) to hold frequency,
+        power, and mode identification data.
+        Plots the periodogram data (frequency vs. power) and a threshold line.
+
+        Returns:
+            tuple: A tuple containing:
+                - tb_other_periodogram (ColumnDataSource): Source for the periodogram.
+                - fig_other_periodogram (Figure): Bokeh figure object for the periodogram.
+        """
         ff, pp = self.read_fits_get_fp()
         mm = ['999']*(len(pp))
 
@@ -429,7 +496,13 @@ class Interactive(Environment):
         return tb_other_periodogram, fig_other_periodogram
 
     def plot_vertical_lines(self):
+        """
+        Plots vertical lines on the main periodogram to indicate selected mode frequencies.
 
+        These lines are drawn based on the data in `self.tb_se_second_source` (Table 2,
+        the final selection table). The lines are colored according to the mode type ('l' value)
+        using `self.mode_color_map`.
+        """
 
         color_map = self.mode_color_map
         color_mapper = CategoricalColorMapper(
@@ -448,9 +521,18 @@ class Interactive(Environment):
 
 
     def make_tb_echelle_diagram(self):
-        '''
-        Width & Height
-        '''
+        """
+        Generates or updates the data for the echelle diagram.
+
+        If the echelle diagram table (`self.env.tb_echelle_diagram`) is not
+        initialized, it creates it.
+        If the 'Show Echelle' checkbox is active and periodogram data is available,
+        it calculates the echelle diagram data using `_clean_echelle()`.
+        This involves reshaping the periodogram power based on the current delta Nu.
+        The results (image, frequency axes, dimensions) are stored in
+        `self.env.tb_echelle_diagram`. If 'Show Echelle' is not active,
+        it clears the echelle diagram data.
+        """
         if self.env.tb_echelle_diagram == None:
             print('Creating an echelle diagram, Creating column source')
             self.env.tb_echelle_diagram = ColumnDataSource(
@@ -522,6 +604,16 @@ class Interactive(Environment):
 
 
     def initialize_selection_tables(self):
+        """
+        Initializes the ColumnDataSources and Bokeh DataTable widgets for mode selection.
+
+        Creates two tables:
+        - `self.env.table_se_first`: For temporary mode selections (Table 1).
+        - `self.env.table_se_second`: For final mode selections (Table 2).
+        Each table is backed by a `ColumnDataSource` (`self.tb_se_first_source` and
+        `self.tb_se_second_source` respectively) and configured with columns for
+        'Slicefreq', 'Frequency', 'Power', and 'Mode'.
+        """
 
         # self.tb_se_first_source=ColumnDataSource(data=dict(x=[], y=[],z=[]))
         # self.tb_se_second_source=ColumnDataSource(data=dict(x=[], y=[], z=[]))
@@ -599,6 +691,15 @@ class Interactive(Environment):
         #                         fill_alpha=0.6)
 
     def update_selection_tables(self):
+        """
+        Sets up (or would set up) callbacks for interactions between selection tables and plots.
+
+        This method is largely commented out in the provided code. Its original intent
+        was likely to establish JavaScript callbacks (`CustomJS`) or Python callbacks
+        to synchronize selections made on the echelle diagram grid (`self.env.tb_grid_source`)
+        or the main periodogram (`self.env.tb_other_periodogram`) with the mode selection
+        tables (`self.tb_se_first_source`).
+        """
         # self.env.tb_grid_source.selected.js_on_change(
         #     "indices",
         #     CustomJS(
@@ -661,11 +762,20 @@ class Interactive(Environment):
 
 
     def make_grid(self):
-        '''
+        """
+        Initializes and populates the ColumnDataSource for the echelle diagram grid points.
 
-        Initialize grid source
-
-        '''
+        If `self.env.tb_grid_source` is None, it's initialized.
+        If the 'Make Grid' checkbox is active and periodogram data is available:
+        - It filters the echelle diagram points (`self.xx`, `self.yy`,
+          `self.freq_values`, `self.power_values` from `_clean_echelle`)
+          based on a power threshold (`self.env.echelle_noise_cuttoff_text`).
+        - The filtered points are stored in `self.env.tb_grid_source`.
+        - It applies existing mode assignments from Table 1 and Table 2 to these grid points.
+        - It adjusts the size of circles on the echelle diagram based on `self.env.grid_circle_size`.
+        - If 'Show Modes Only' is active, it further filters the grid to show only points with assigned modes.
+        If 'Make Grid' is not active, `self.env.tb_grid_source` is cleared.
+        """
 
         if self.env.tb_grid_source == None:
             self.env.tb_grid_source = ColumnDataSource(
@@ -773,9 +883,20 @@ class Interactive(Environment):
             self.env.tb_grid_source.data = dict(old_data.data)
 
     def read_fits_get_fp(self):
-        '''
-        Test function: Read fits file and get f and p"
-        '''
+        """
+        Reads frequency (f) and power (p) data from a FITS periodogram file.
+
+        The path to the FITS file is obtained from `self.env.tb_source.data['path_fits']`.
+        It expects the FITS file to have frequency in the first column and power in
+        the second column of the primary HDU's data. Byte swapping is performed
+        to ensure correct endianness.
+
+        Returns:
+            tuple: A tuple containing:
+                - ff (numpy.ndarray): Array of frequency values.
+                - pp (numpy.ndarray): Array of power values.
+                Returns empty arrays if the file does not exist or cannot be read.
+        """
         self.publish_message(text='Reading Fits')
         ff = np.array([])
         pp = np.array([])
@@ -806,12 +927,29 @@ class Interactive(Environment):
         return ff, pp
 
     def calculate_synthetic_psd(self):
+        """
+        Calculates and plots a synthetic Power Spectral Density (PSD).
+
+        This function calls `functions.calculate_synthetic_spectrum` using
+        filenames for the observed FITS, background parameters, and peak-bagging
+        parameters obtained from the environment (`self.env`).
+        It then plots the observed PSD, the calculated synthetic PSD, and their
+        subtraction on the main periodogram figure (`self.env.fig_other_periodogram`).
+        The plot selection table (`self.env.tb_plot`) is updated to allow toggling
+        these new plots.
+
+        Returns:
+            pandas.DataFrame: The DataFrame containing the frequency, observed PSD,
+                              synthetic PSD, and subtracted PSD, as returned by
+                              `functions.calculate_synthetic_spectrum` and filtered
+                              by current frequency limits.
+        """
         self.publish_message('Calculating Synthetic Spectra; Busy')
         self.env.select_grid_menu.options = ['Obs', 'Syn', 'Sub']
 
-        data = functions. calculate_synthetic_spectrum(fits_file=self.env.selected_filename_text.text, 
-                                                     bkg_file=self.env.selected_filename_background_text.text, 
-                                                     pkb_file=self.env.selected_filename_pkb_text.text, 
+        data = functions. calculate_synthetic_spectrum(fits_file=self.env.selected_filename_text.text,
+                                                     bkg_file=self.env.selected_filename_background_text.text,
+                                                     pkb_file=self.env.selected_filename_pkb_text.text,
                                                      n_harvey=2)
         data['sub_psd'] = data['psd'] - data ['synthetic_psd']
         freq_min =  float(self.env.frequency_minimum_text.value)
@@ -854,7 +992,14 @@ class Interactive(Environment):
         return data
 
     def show_plot(self):
-        df = self.env.tb_plot.to_df() 
+        """
+        Updates the visibility of plots on the main periodogram based on table selection.
+
+        Iterates through the plot selection table (`self.env.tb_plot`).
+        Hides all plots first, then makes visible only those plots whose
+        corresponding rows in the table are selected.
+        """
+        df = self.env.tb_plot.to_df()
         for name in df['name']:
             self.env.fig_other_periodogram.select(name).visible = False
         ind =self.env.tb_plot.selected.indices
@@ -865,11 +1010,22 @@ class Interactive(Environment):
         print ('Finished')
 
     def add_plot_other_periodogram(self,freq =None,power= None,
-                                   name= None, color = None ):        
-        
+                                   name= None, color = None ):
+        """
+        Adds or updates a line plot on the main periodogram figure.
+
+        If a line with the given `name` already exists, its data source is updated.
+        Otherwise, a new line is created. The line is initially set to be invisible.
+
+        Args:
+            freq (array-like, optional): Frequency values for the plot.
+            power (array-like, optional): Power values for the plot.
+            name (str, optional): Name for the line glyph (used for selection/update).
+            color (str, optional): Color for the line.
+        """
         # self.env.fig_other_periodogram.line(freq, power,
         #                    name=name,
-        #                     alpha=0.7, color=color)  
+        #                     alpha=0.7, color=color)
         # self.env.fig_other_periodogram.select(name).visible = False
 
         existing_line = None
@@ -892,6 +1048,14 @@ class Interactive(Environment):
 
 
     def update_value(self):
+        """
+        Updates environment variables from UI text inputs and refreshes plots.
+
+        Reads values for minimum frequency, maximum frequency, maximum delta Nu,
+        and current delta Nu from their respective TextInput widgets in `self.env`.
+        Updates the `self.env.dnu_slider` value.
+        Then calls `update_plot()` to refresh the echelle diagram and related plots.
+        """
         self.env.minimum_frequency = float(
             self.env.frequency_minimum_text.value)
         self.env.maximum_frequency = float(
@@ -917,7 +1081,16 @@ class Interactive(Environment):
 
     def check_change_in_frequency_limit(self):
         """
-        Return true if there is change in frequency
+        Checks if the frequency limits or selected grid type have changed.
+
+        Compares the current values of `self.env.minimum_frequency`,
+        `self.env.maximum_frequency`, and `self.env.select_grid_menu.value`
+        with their previously stored values (`self.old_frequency_min`,
+        `self.old_frequency_max`, `self.old_grid_selection`).
+        Updates the stored "old" values for the next check.
+
+        Returns:
+            bool: True if any of the monitored values have changed, False otherwise.
         """
         #Get new frequency values
     
@@ -942,6 +1115,22 @@ class Interactive(Environment):
         return value
 
     def update_whole_plot(self,attr, old , new):
+        """
+        Comprehensive update callback, typically triggered by a change in the main source.
+
+        This method orchestrates a full refresh of the mode selection interface:
+        1. Calls `trim_frequency()` to reload and filter periodogram data.
+        2. Clears both mode selection tables (`clear_se_table1`, `clear_se_table2`).
+        3. Calls `update_plot()` to regenerate echelle diagram and grid.
+        4. Updates the echelle diagram's x-axis label with the current delta Nu.
+        5. Adjusts color mapping and stretch slider for the echelle diagram image.
+        6. Updates visibility of horizontal lines based on checkbox state.
+
+        Args:
+            attr: The attribute that changed (unused).
+            old: The old data (unused).
+            new: The new data (unused).
+        """
         self.trim_frequency()
         self.clear_se_table1()
         self.clear_se_table2()
@@ -995,6 +1184,30 @@ class Interactive(Environment):
 
 
     def update_plot(self, attr, old, new):
+        """
+        Core callback function to update plots when parameters change.
+
+        This method is called when various UI elements (like sliders or text inputs
+        for frequency, delta Nu, etc.) are modified.
+        It performs the following steps:
+        1. Checks if frequency limits have changed (`check_change_in_frequency_limit`)
+           and calls `trim_frequency()` if they have.
+        2. Updates the echelle diagram's x-axis label.
+        3. Calls `make_tb_echelle_diagram()` to regenerate echelle data.
+        4. If the echelle diagram is visible:
+            - Calculates color stretch limits (lo, hi) from the echelle image power.
+            - Updates the color palette and potentially reverses it.
+            - If color map is not locked, updates the echelle image's color mapper
+              and the stretch slider's range and value.
+            - Updates the delta Nu slider's range.
+        5. Updates visibility of vertical lines on the periodogram (mode markers).
+        6. Calls `make_grid()` to regenerate the echelle grid points.
+
+        Args:
+            attr: The attribute that changed (unused).
+            old: The old value (unused).
+            new: The new value (unused).
+        """
         self.publish_message(text='Updating Plot')
         if self.check_change_in_frequency_limit():
             print('Triming Frequency')
@@ -1013,19 +1226,19 @@ class Interactive(Environment):
                 lo, hi = np.nanpercentile(ep.value, [0.1, 99.9])
                 vlo, vhi = 0.3 * lo, 1.7 * hi
                 vstep = (lo - hi)/500
-                # self.palette = getattr(bokeh.palettes, 
+                # self.palette = getattr(bokeh.palettes,
                 #                     self.env.select_color_palette.value)[9]
-                
+
                 pal=getattr(bokeh.palettes, self.env.select_color_palette.value)
                 if type(pal)==dict:
                     self.palette = pal[9]
                 else:
-                    self.palette = pal  
-                
+                    self.palette = pal
+
                 if self.env.check_reverse_color_palette.active[0]!=1:
                     self.palette = list(reversed(self.palette))
                 if self.env.check_color_map_lock.active[0]==1:
-                    print('Value of colormap check',self.env.check_color_map_lock.active[0])                    
+                    print('Value of colormap check',self.env.check_color_map_lock.active[0])
                     color_mapper = LogColorMapper(palette=self.palette, low=lo, high=hi)
                     self.env.fig_tpfint.select(
                         'img').glyph.color_mapper.low = color_mapper.low
@@ -1050,78 +1263,96 @@ class Interactive(Environment):
 
     def _validate_numax(self, numax):
         """
-        Raises exception if `numax` is None and `self.numax` is not set.
+        Validates the nu_max (frequency of maximum power) value.
+
+        If `numax` is None, it attempts to return `self.numax` (if set, though
+        this attribute is not explicitly defined in this class, suggesting it might
+        be from a parent or intended for future use).
+
+        Args:
+            numax (float or None): The nu_max value to validate.
+
+        Returns:
+            float: The validated nu_max value.
+
+        Raises:
+            AttributeError: If `numax` is None and `self.numax` is not available.
         """
         if numax is None:
             try:
                 return self.numax
             except AttributeError:
                 raise AttributeError(
-                    "You need to call `Seismology.estimate_numax()` first.")
+                    "You need to call `Seismology.estimate_numax()` first.") # Or have self.numax defined
         return numax
 
     def _validate_deltanu(self, deltanu):
         """
-        Raises exception if `deltanu` is None and `self.deltanu` is not set.
+        Validates the delta Nu (large frequency separation) value.
+
+        If `deltanu` is None, it returns `self.dnu_val` (the current delta Nu
+        value from the UI or environment).
+
+        Args:
+            deltanu (float or None): The delta Nu value to validate.
+
+        Returns:
+            float: The validated delta Nu value.
+
+        Raises:
+            AttributeError: If `deltanu` is None and `self.dnu_val` is not available
+                            (should not happen in normal operation).
         """
         if deltanu is None:
             try:
-                print('Check here')
+                print('Check here') # Debug print
                 return self.dnu_val
             except AttributeError:
                 raise AttributeError(
-                    "You need to call `Seismology.estimate_deltanu()` first.")
+                    "You need to call `Seismology.estimate_deltanu()` first.") # Or have self.dnu_val defined
         return deltanu
 
     def _clean_echelle(self, deltanu=None, numax=None,
                        minimum_frequency=None, maximum_frequency=None,
                        smooth_filter_width=None, scale='linear'):
         """
-        Takes input seismology object and creates the necessary arrays for an echelle
+        Processes periodogram data to generate arrays for an echelle diagram.
 
-        diagram. Validates all the inputs.
+        Validates deltanu and numax inputs. Filters the periodogram data based
+        on frequency limits (either derived from numax or explicit min/max frequencies).
+        Uses an adaptation of echelle diagram generation logic (similar to that
+        found in Lightkurve or other asteroseismology tools, here specifically
+        calling `self.apollinaire_echelle` for the core processing) to reshape
+        the frequency and power arrays.
 
-        Parameters
-        ----------
-        deltanu : float
-            Value for the large frequency separation of the seismic mode
-            frequencies in the periodogram. Assumed to have the same units as
-            the frequencies, unless given an Astropy unit.
-            Is assumed to be in the same units as frequency if not given a unit.
-        numax : float
-            Value for the frequency of maximum oscillation. If a numax is
-            passed, a suitable range one FWHM of the mode envelope either side
-            of the will be shown. This is overwritten by custom frequency ranges.
-            Is assumed to be in the same units as frequency if not given a unit.
-        minimum_frequency : float
-            The minimum frequency at which to display the echelle
-            Is assumed to be in the same units as frequency if not given a unit.
-        maximum_frequency : float
-            The maximum frequency at which to display the echelle.
-            Is assumed to be in the same units as frequency if not given a unit.
-        smooth_filter_width : float
-            If given a value, will smooth periodogram used to plot the echelle
-            diagram using the periodogram.smooth(method='boxkernel') method with
-            a filter width of `smooth_filter_width`. This helps visualise the
-            echelle diagram. Is assumed to be in the same units as the
-            periodogram frequency.
-        ax : `~matplotlib.axes.Axes`
-            A matplotlib axes object to plot into. If no axes is provided,
-            a new one will be created.
-        scale: str
-            Set z axis to be "linear" or "log". Default is linear.
+        Args:
+            deltanu (float, optional): Large frequency separation in units consistent
+                with the periodogram's frequency. If None, uses `self.dnu_val`.
+            numax (float, optional): Frequency of maximum oscillation power. Used to
+                set default frequency ranges if min/max_frequency are not provided.
+                Units should be consistent with periodogram frequency.
+            minimum_frequency (float, optional): Minimum frequency for the echelle.
+                Units should be consistent with periodogram frequency.
+            maximum_frequency (float, optional): Maximum frequency for the echelle.
+                Units should be consistent with periodogram frequency.
+            smooth_filter_width (float, optional): Width for smoothing the periodogram
+                before echelle generation. Units should be consistent.
+            scale (str, optional): Scale for power in the echelle diagram ('linear'
+                or 'log'). Defaults to 'linear'.
 
-        Returns
-        -------
-        ep : np.ndarray
-            Echelle diagram power
-        x_f : np.ndarray
-            frequencies for X axis
-        y_f : np.ndarray
-            frequencies for Y axis
+        Returns:
+            tuple: Contains:
+                - ep (Quantity): 2D array of power values for the echelle diagram.
+                - x_f (Quantity): 1D array for the x-axis of the echelle (frequency modulo deltanu).
+                - y_f (Quantity): 1D array for the y-axis of the echelle (frequency slices).
+                - y_original (Quantity): Original y-axis frequency values before centering.
+                - xx (list): Flattened x-coordinates for scatter points on echelle.
+                - yy (list): Flattened y-coordinates for scatter points on echelle.
+                - freq_values (list): Flattened original frequency values corresponding to xx, yy.
+                - power_values (list): Flattened original power values corresponding to xx, yy.
         """
         # if (minimum_frequency is None) & (maximum_frequency is None):
-        #     numax = self._validate_numax(numax)
+        #     numax = self._validate_numax(numax) # numax validation handled if used
         deltanu = self._validate_deltanu(deltanu)
 
         # if (not hasattr(numax, 'unit')) & (numax is not None):
@@ -1264,7 +1495,18 @@ class Interactive(Environment):
         return ep, x_f, y_f, y_original, xx, yy, freq_values, power_values
 
     def inverted_slider(self):
-        
+        """
+        Initializes and configures the "Inverted Slider" and associated plot elements.
+
+        This slider (`self.env.inverted_slider`) is likely used to adjust the
+        position or appearance of "inverted lines" on the main periodogram, which
+        might represent theoretical mode ridge locations or similar features.
+        - If the slider doesn't exist, it's created.
+        - A `ColumnDataSource` (`self.inverted_slider_source`) is set up to hold data
+          for these lines, derived from `self.tb_se_second_source`.
+        - Segments (lines) are plotted on `self.env.fig_other_periodogram` based on this source.
+        - A callback (`self.update_inverted_slider`) is attached to the slider's value change.
+        """
         if self.env.inverted_slider ==None:
             sld_val = float(self.env.inverted_slider_max_value_text.value)
             self.env.inverted_slider = Slider(start=-1*sld_val,
@@ -1315,7 +1557,16 @@ class Interactive(Environment):
 
     def update_inverted_slider(self, attr,old, new):
         """
-        Update x value
+        Callback for when the 'Inverted Slider' value changes.
+
+        Updates the `self.env.inverted_line_xvalue_text` input with the new
+        slider value, and then calls `update_inverted_line()` to refresh the
+        plotted lines.
+
+        Args:
+            attr: The attribute that changed (unused).
+            old: The old slider value (unused).
+            new: The new slider value.
         """
         self.env.inverted_line_xvalue_text.value = str(
                             self.env.inverted_slider.value)
@@ -1323,8 +1574,18 @@ class Interactive(Environment):
 
     def update_inverted_line(self):
         """
-        Update inverted line
-        """ 
+        Updates the plotted "inverted lines" based on current UI parameters.
+
+        - Adjusts the start and end range of `self.env.inverted_slider` based on
+          `self.env.inverted_slider_max_value_text`.
+        - Recalculates the positions of the inverted lines using data from
+          `self.tb_se_second_source` and parameters from various text inputs
+          (`inverted_line_initial_y_text`, `inverted_line_length_text`,
+          `inverted_line_scale_text`, `inverted_line_xvalue_text`).
+        - Updates `self.inverted_slider_source.data` with the new line coordinates.
+        - Toggles the visibility of these lines based on
+          `self.env.check_show_inverted_lines.active`.
+        """
         sld_val = float(self.env.inverted_slider_max_value_text.value)
         self.env.inverted_slider.start = -1*sld_val
         self.env.inverted_slider.end = 1*sld_val
@@ -1361,7 +1622,30 @@ class Interactive(Environment):
                                minimum_frequency=None, maximum_frequency=None, smooth_filter_width=None,
                                scale='linear', width=490, height=340, title='Echelle'):
         """
-        Helper function to make the elements of the echelle diagram for bokeh plotting.
+        Helper function to create Bokeh figure and widgets for the echelle diagram.
+
+        This function constructs the main Bokeh figure for the echelle diagram,
+        configures its axes and tooltips. It sets up a `LogColorMapper` for the
+        echelle image based on the power distribution. An image glyph is added to
+        the figure, sourced from `self.env.tb_echelle_diagram`.
+        It also creates a `RangeSlider` (`stretch_slider`) for adjusting the
+        color stretch of the echelle image and defines its callback.
+
+        Args:
+            deltanu (Quantity): The large frequency separation, used for axis labeling.
+            cmap (str, optional): Colormap name (though self.palette is often used). Defaults to 'hot'.
+            minimum_frequency (float, optional): Minimum frequency (not directly used for plot range here).
+            maximum_frequency (float, optional): Maximum frequency (not directly used for plot range here).
+            smooth_filter_width (float, optional): Smoothing width (not used here).
+            scale (str, optional): Power scale ('linear' or 'log'). Defaults to 'linear'.
+            width (int, optional): Width of the figure. Defaults to 490. (Figure width is actually set to 800).
+            height (int, optional): Height of the figure. Defaults to 340. (Figure height is actually set to 800).
+            title (str, optional): Title for the echelle diagram figure. Defaults to 'Echelle'.
+
+        Returns:
+            tuple:
+                - fig (Figure): The Bokeh figure object for the echelle diagram.
+                - stretch_slider (RangeSlider): The Bokeh RangeSlider for color stretch.
         """
 
         freq = self.env.tb_other_periodogram.data['frequency'] * \
@@ -1430,24 +1714,20 @@ class Interactive(Environment):
 
     def interact_echelle(self, notebook_url="localhost:8888", **kwargs):
         """
-        Display an interactive Jupyter notebook widget showing an Echelle 
-        diagram.
+        Sets up the interactive components of the echelle diagram.
 
-        This feature only works inside an active Jupyter Notebook, and
-        requires an optional dependency, ``bokeh`` (v1.0 or later).
-        This dependency can be installed using e.g. `conda install bokeh`.
+        This method creates the main echelle diagram figure and associated
+        sliders for delta Nu (`dnu_slider`) and color stretch
+        (`stretch_sliderint`). It defines callbacks for these widgets to
+        update the echelle diagram when their values change.
+        The `_make_echelle_elements` helper function is used to create the
+        figure and stretch slider. Navigation buttons for delta Nu are also
+        initialized here.
 
-        Parameters
-        ----------
-        notebook_url : str
-            Location of the Jupyter notebook page (default: "localhost:8888")
-            When showing Bokeh applications, the Bokeh server must be
-            explicitly configured to allow connections originating from
-            different URLs. This parameter defaults to the standard notebook
-            host and port. If you are running on a different location, you
-            will need to supply this value for the application to display
-            properly. If no protocol is supplied in the URL, e.g. if it is
-            of the form "localhost:8888", then "http" will be used.
+        Args:
+            notebook_url (str, optional): Location of the Jupyter notebook page.
+                Defaults to "localhost:8888". (Primarily for Bokeh server setups).
+            **kwargs: Additional keyword arguments passed to `_make_echelle_elements`.
         """
         # try:
         #     import bokeh
@@ -1543,81 +1823,55 @@ class Interactive(Environment):
                             vmin=None, vmax=None, scatter_color='white', fmt='+', ylim=None,
                             shading='gouraud', mfc='none', ms=20, index_offset=None,
                             mec=None, xlabel=None, ylabel=None, **kwargs):
-        '''
-        Build the echelle diagram of a given PSD.  
+            """
+            Builds the echelle diagram data from a given Power Spectral Density (PSD).
 
-        :param freq: input vector of frequencies.
-        :type freq: ndarray
+            This method takes frequency and PSD arrays, and a delta Nu value,
+            and reshapes the PSD into an echelle diagram format. It determines the
+            number of slices and the length of each slice based on delta Nu and
+            the frequency resolution.
 
-        :param PSD: input vector of power. Must be of same size than freq.
-        :type PSD: ndarray
+            This is largely based on the echelle diagram generation logic from the
+            Apollinaire library or similar tools.
 
-        :param dnu: the large frequency separation use to cut slices 
-            into the diagram. 
-        :type dnu: float
+            Args:
+                freq (ndarray): Input vector of frequencies.
+                PSD (ndarray): Input vector of power. Must be of same size as freq.
+                dnu (float): The large frequency separation used to cut slices.
+                twice (bool, optional): If True, slice using 2 * dnu. Defaults to False.
+                fig (matplotlib.figure.Figure, optional): Matplotlib figure (not used in current Bokeh context).
+                index (int, optional): Subplot index (not used in current Bokeh context).
+                figsize (tuple, optional): Figure size (not used in current Bokeh context).
+                title (str, optional): Plot title (not used in current Bokeh context).
+                smooth (int, optional): Window size for rolling mean smoothing of PSD (not directly used here, smoothing expected before call).
+                cmap (str, optional): Colormap (handled by Bokeh).
+                cmap_scale (str, optional): Scale for colormap ('linear' or 'logarithmic').
+                mode_freq (ndarray or tuple, optional): Frequencies of modes to overplot (not used here).
+                mode_freq_err (ndarray or tuple, optional): Uncertainties for mode_freq (not used here).
+                vmin (float, optional): Minimum value for colormap.
+                vmax (float,optional): Maximum value for colormap.
+                scatter_color (str, optional): Color for scatter points (not used here).
+                fmt (str or tuple, optional): Format for error bars (not used here).
+                ylim (tuple, optional): Y-axis limits for plot.
+                shading (str, optional): Shading for pcolormesh (e.g., 'gouraud', 'flat').
+                mfc (str, optional): Marker face color.
+                ms (float, optional): Marker size.
+                index_offset (int, optional): Offset for slicing PSD and freq arrays.
+                mec (str, optional): Marker edge color.
+                xlabel (str, optional): X-axis label.
+                ylabel (str, optional): Y-axis label.
+                **kwargs: Additional arguments.
 
-        :param twice: slice using 2 x *dnu* instead of *dnu*, default False.
-        :type twice: bool
-
-        :param fig: figure on which the echelle diagram will be plotted. If ``None``, a new figure 
-            instance will be created. Optional, default ``None``. 
-        :type fig: matplotlib Figure
-
-        :param index: position of the echelle diagram Axe in the figure. Optional, default ``111``.
-        :type index: int
-
-        :param figsize: size of the echelle diagram to plot.
-        :type figsize: tuple
-
-        :param title: title of the figure. Optional, default ``(16, 16)``
-        :type title: str
-
-        :param smooth: size of the rolling window used to smooth the PSD. Default 10.
-        :type smooth: int
-
-        :param cmap: select one available color map provided by matplotlib, default ``cividis``
-        :type cmap: str
-
-        :param cmap_scale: scale use for the colormap. Can be 'linear' or 'logarithmic'.
-            Optional, default 'linear'.
-        :type cmap_scale: str
-
-        :param mode_freq: frequency array of the modes to represent on the diagram. It can be single 
-            array or a tuple of array.
-        :type mode_freq: ndarray or tuple of array
-
-        :param mode_freq_err: frequency uncertainty of the modes to represent on the diagram. It can be
-            a single array or a tuple of array.
-        :type mode_freq_err: ndarray or tuple of array
-
-        :param vmin: minimum value for the colormap.
-        :type vmin: float
-
-        :param vmax: maximum value for the colormap.
-        :type vmax: float
-
-        :param scatter_color: color of the scatter point of the mode frequencies. Optional, default ``white``.
-        :type scatter_color: str
-
-        :param fmt: the format of the errorbar to plot. Can be a single string or a tuple of string with the same
-            dimension that ``mode_freq``.
-        :type fmt: str or tuple
-
-        :param ylim: the y-bounds of the echelle diagram.
-        :type ylim: tuple
-
-        :param mew: marker edge width. Optional, default 1.
-        :type mew: float
-
-        :param markersize: size of the markers used for the errorbar plot. Optional, default 10.
-        :type markersize: float
-
-        :param capsize: length of the error bar caps. Optional, default 2.
-        :type capsize: float
-
-        :return: the matplotlib Figure with the echelle diagram.
-        :rtype: matplotlib Figure
-        '''
+            Returns:
+                tuple:
+                    - ed (ndarray): The 2D echelle diagram power array.
+                    - x_freq (ndarray): The x-coordinates (frequency modulo dnu).
+                    - y_freq (ndarray): The y-coordinates (base frequency of each slice).
+                    - xx (list): Flattened x-coordinates of the full grid.
+                    - yy (list): Flattened y-coordinates of the full grid.
+                    - freq_values (list): Flattened original frequency values on the grid.
+                    - power_values (list): Flattened power values on the grid.
+            """
 
         # if cmap_scale not in ['linear', 'logarithmic'] :
         #     raise Exception ("cmap_scale should be set to 'linear' or 'logarithmic'.")
@@ -1721,23 +1975,31 @@ class Interactive(Environment):
         return ed, x_freq, y_freq, xx, yy, freq_values, power_values
 
     def clear_se_table1(self):
-        '''This function clear table1 of the program'''
+        """Clears all data from the first mode selection table (Table 1)."""
 
         old_data = ColumnDataSource(
             data=dict(Slicefreq=[], Frequency=[], Power=[],Mode=[], xx=[]))
         self.tb_se_first_source.data = dict(old_data.data)
 
     def clear_se_table2(self):
-        '''This function clear table1 of the program'''
+        """Clears all data from the second mode selection table (Table 2)."""
 
         old_data = ColumnDataSource(
             data=dict(Slicefreq=[], Frequency=[], Power=[],Mode=[], xx=[]))
         self.tb_se_second_source.data = dict(old_data.data)
 
     def find_peak_frequencies(self):
-        '''
-        Find peak of the frequencies
-        '''
+        """
+        Identifies and selects peak frequencies within currently selected echelle grid regions.
+
+        For the points currently selected in `self.env.tb_grid_source` (the echelle
+        diagram grid), this function groups them by their y-coordinate (`yy`,
+        representing frequency slices). Within each group (slice), it finds the point
+        with the maximum power.
+        It then updates the selection in `self.env.tb_grid_source` to only these
+        peak frequencies and calls `get_all_selection_button()` to populate Table 1
+        with these peaks. It also clears selections on the main periodogram.
+        """
 
         df_se = pd.DataFrame()
         yy = self.env.tb_grid_source.data['yy']
@@ -1787,7 +2049,17 @@ class Interactive(Environment):
 
     def selection_prd_to_grid_fig(self, attrname, old, new):
         """
-        Selected frequencies from prd to grid
+        Synchronizes selections from the main periodogram to the echelle diagram grid.
+
+        When points are selected on `self.env.tb_other_periodogram`, this callback
+        finds the corresponding points (by frequency) in `self.env.tb_grid_source`
+        and selects them. This helps visualize where periodogram selections fall
+        on the echelle diagram.
+
+        Args:
+            attrname: The attribute that changed (e.g., 'indices').
+            old: The old selection.
+            new: The new selection (list of selected indices in periodogram).
         """
         
         se_indices = self.tb_other_periodogram.selected.indices
@@ -1816,7 +2088,18 @@ class Interactive(Environment):
 
     def selection_grid_to_table_fig(self, attrname, old, new):
         """
-        Selection from grid to table 
+        Populates Table 1 with data from selected points on the echelle diagram grid.
+
+        When points are selected in `self.env.tb_grid_source`, this callback
+        extracts their 'yy' (Slicefreq), 'freq_values' (Frequency),
+        'power_values' (Power), 'Mode', and 'xx' attributes.
+        This data is then added to `self.tb_se_first_source` (Table 1),
+        avoiding duplicate entries based on frequency.
+
+        Args:
+            attrname: The attribute that changed (e.g., 'indices').
+            old: The old selection.
+            new: The new selection (list of selected indices in grid).
         """
         
         se_indices = self.env.tb_grid_source.selected.indices
@@ -1850,11 +2133,19 @@ class Interactive(Environment):
 
 
     def selection_grid_to_prd_fig(self, attrname, old, new):
-        '''
-        This function will not be used, slowing the system
-        This function moves selected indices in grid to periodogram
+        """
+        Synchronizes selections from the echelle diagram grid to the main periodogram.
 
-        '''
+        (Note: Docstring in code says "This function will not be used, slowing the system")
+        When points are selected on `self.env.tb_grid_source`, this callback
+        finds the corresponding points (by frequency) in `self.env.tb_other_periodogram`
+        and selects them.
+
+        Args:
+            attrname: The attribute that changed (e.g., 'indices').
+            old: The old selection.
+            new: The new selection (list of selected indices in grid).
+        """
 
         df_se = pd.DataFrame()
         yy = self.env.tb_grid_source.data['yy']
@@ -1891,7 +2182,16 @@ class Interactive(Environment):
 
     def selection_table_to_prd_fig(self, attrname, old, new):
         """
-        Table to prd selection
+        Synchronizes selections from Table 1 to the main periodogram.
+
+        When data in `self.tb_se_first_source` changes (implicitly, when items
+        are selected or added), this function would take the frequencies from
+        Table 1 and select corresponding points in `self.env.tb_other_periodogram`.
+
+        Args:
+            attrname: The attribute that changed.
+            old: The old data/selection.
+            new: The new data/selection.
         """
 
         df_table = self.tb_se_first_source.to_df()
@@ -1911,7 +2211,17 @@ class Interactive(Environment):
 
     def selection_table2_to_prd_fig(self, attrname, old, new):
         """
-        Table to prd selection
+        Synchronizes selections from Table 2 to the main periodogram.
+
+        Similar to `selection_table_to_prd_fig` but operates on
+        `self.tb_se_second_source` (Table 2, the final selection table).
+        When data in Table 2 changes, this function selects corresponding
+        frequencies in the main periodogram.
+
+        Args:
+            attrname: The attribute that changed.
+            old: The old data/selection.
+            new: The new data/selection.
         """
 
         df_table = self.tb_se_second_source.to_df()
@@ -1932,7 +2242,17 @@ class Interactive(Environment):
 
     def get_all_selection_button(self):
         """
-        Move selection around
+        Callback for the "Get Selection" button.
+
+        This function triggers a chain of selection synchronization methods
+        to ensure consistency between the echelle grid, periodogram, and Table 1.
+        Specifically, it calls:
+        - `selection_grid_to_prd_fig()`: echelle grid -> periodogram
+        - `selection_prd_to_grid_fig()`: periodogram -> echelle grid
+        - `selection_grid_to_table_fig()`: echelle grid -> Table 1
+        A message is published to the UI.
+        (Some parts of the original code here are commented out, suggesting
+         different or more complex synchronization logic might have been tried).
         """
 
        
@@ -1966,7 +2286,11 @@ class Interactive(Environment):
 
     def clear_se_grid_prd(self):
         """
-        Clear all selections
+        Clears selections on both the main periodogram and the echelle diagram grid.
+
+        Sets `selected.indices` to an empty list for both
+        `self.tb_other_periodogram` and `self.env.tb_grid_source`.
+        Calls `update_plot()` to refresh the visuals.
         """
         self.tb_other_periodogram.selected.indices = list([])
         self.env.tb_grid_source.selected.indices = list([])
@@ -1976,7 +2300,14 @@ class Interactive(Environment):
 
     def click_mode_apply_button(self):
         """
-        Change mode selection
+        Applies the selected mode label to frequencies currently in Table 1.
+
+        Takes the mode label selected in `self.env.select_mode_menu` and
+        applies it to the 'Mode' column for all frequencies listed in
+        `self.tb_se_first_source`. It updates the corresponding entries
+        in the main periodogram data source (`self.env.tb_other_periodogram`)
+        and the echelle grid data source (`self.env.tb_grid_source`) to reflect
+        this mode assignment. Finally, it clears Table 1.
         """
         df_first=self.tb_se_first_source.to_df()
         df_first['Frequency']=df_first['Frequency'].round(
@@ -2023,7 +2354,12 @@ class Interactive(Environment):
 
     def click_move_se_1_2_button(self):
         """
-        Move frequencies from table 1 to table 2
+        Moves selected modes from Table 1 to Table 2.
+
+        Filters rows in `self.tb_se_first_source` (Table 1) that match the
+        mode currently selected in `self.env.select_mode_menu`.
+        These matching rows are removed from Table 1 and appended to
+        `self.tb_se_second_source` (Table 2).
         """
 
         mode = self.env.select_mode_menu.value
@@ -2047,7 +2383,14 @@ class Interactive(Environment):
 
     def click_move_se_2_1_button(self):
         """
-        Move frequencies from table 1 to table 2
+        Moves selected modes from Table 2 back to Table 1.
+
+        Filters rows in `self.tb_se_second_source` (Table 2) that match the
+        mode currently selected in `self.env.select_mode_menu`.
+        These matching rows are removed from Table 2.
+        It then finds the corresponding full data for these frequencies from the
+        echelle grid (`self.env.tb_grid_source`) and appends them to
+        `self.tb_se_first_source` (Table 1), ensuring no duplicates in Table 1.
         """
         # self.selection_table2_to_prd_fig(0,0,0)
         # self.selection_prd_to_grid_fig(0,0,0)
@@ -2095,17 +2438,45 @@ class Interactive(Environment):
 
 
     def assign_mode_color(self,modes):
+        """
+        Assigns colors to modes based on their 'l' value.
+
+        (Currently seems unused or part of an incomplete feature for coloring
+        Table 2 directly, as `mode_color` column isn't standard in tables).
+        Takes a list of mode labels (e.g., '0', '1', '999') and maps them to
+        colors defined in `self.mode_color_map`.
+
+        Args:
+            modes (iterable): An iterable of mode labels (as strings or convertible to strings).
+
+        Returns:
+            list: A list of color strings corresponding to the input modes.
+        """
         val=list(modes)
         val= map(str, val)
 
-        val = list(map(lambda x: x.replace('999', self.mode_color_map[-1]),val))
-        val = list(map(lambda x: x.replace('0', self.mode_color_map[0]), val))
-        val = list(map(lambda x: x.replace('1', self.mode_color_map[1]), val))
+        val = list(map(lambda x: x.replace('999', self.mode_color_map[-1]),val)) # Should be self.mode_color_map['999']
+        val = list(map(lambda x: x.replace('0', self.mode_color_map[0]), val))   # Should be self.mode_color_map['0']
+        val = list(map(lambda x: x.replace('1', self.mode_color_map[1]), val))   # etc.
         val = list(map(lambda x: x.replace('2', self.mode_color_map[2]), val))
         return val
     
     def trim_frequency(self):
-        print ('Value of selection:', self.env.select_mode_menu.value)
+        """
+        Reloads and filters the periodogram data based on current frequency limits and selected grid type.
+
+        - Determines the source of frequency/power data based on `self.env.select_grid_menu.value`:
+            - 'Obs': Reads from FITS file using `read_fits_get_fp()`.
+            - 'Syn': Calculates synthetic spectrum using `calculate_synthetic_psd()` and uses synthetic power.
+            - 'Sub': Calculates synthetic spectrum and uses subtracted power (observed - synthetic).
+        - Converts frequencies to the current `self.env.frequency_unit` and power to `self.env.power_unit`.
+        - Filters the data to the range specified by `self.env.minimum_frequency` and
+          `self.env.maximum_frequency`.
+        - If data remains after filtering, creates a new `lk_prd_module.Periodogram` object,
+          stores it in `self.periodogram`, and updates `self.env.tb_other_periodogram.data`.
+        - If no data remains, `self.env.tb_other_periodogram.data` is cleared.
+        """
+        print ('Value of selection:', self.env.select_grid_menu.value)
         if self.env.select_grid_menu.value == 'Obs':
             ff, pp = self.read_fits_get_fp()
             ff = (ff*u.Hz).to(self.env.frequency_unit).value
@@ -2164,6 +2535,16 @@ class Interactive(Environment):
 
 
     def save_table_2(self):
+        """
+        Saves the contents of Table 2 to a CSV and a PKB file.
+
+        The data from `self.tb_se_second_source` is saved as a CSV file named
+        'modes_parameter_selected.csv' in the source's data folder.
+        Additionally, it converts the table data into the PKB (peak-bagging)
+        format (calculating 'n' values based on delta Nu) and saves it as
+        'modes_parameter_selected.pkb' using `apollinaire.peakbagging.save_pkb`.
+        A message is published to the UI upon completion.
+        """
 
         df=self.tb_se_second_source.to_df()
         id=self.env.tb_source.data['id'][0]
@@ -2190,8 +2571,24 @@ class Interactive(Environment):
         fulltext='Saving '+ file_name + ' :Ready'
         self.publish_message(text=fulltext)
 
-    def load_pkb_to_second_tab(self,file_name):
-        "Loads pkb and return df for second tab"
+    def load_pkb_to_second_tab(self, file_name):
+        """
+        Loads mode data from a PKB file and prepares it for display in Table 2.
+
+        Reads a PKB file (text format) specified by `file_name`.
+        It handles both standard (14 columns) and extended (20 columns) PKB formats.
+        The loaded mode frequencies ('nu' column) are matched to the closest
+        frequencies in the current echelle grid (`self.env.tb_grid_source`)
+        to associate them with echelle diagram coordinates ('Slicefreq', 'xx', 'yy').
+        It filters out modes where the frequency difference is too large ( > 1 unit).
+
+        Args:
+            file_name (str or Path): The path to the PKB file.
+
+        Returns:
+            pandas.DataFrame: A DataFrame formatted for `self.tb_se_second_source`,
+                              containing 'Slicefreq', 'Frequency', 'Power', 'Mode', 'xx'.
+        """
 
         pkb_array = np.loadtxt (file_name, skiprows=0)
         #pkb_array = apol.peakbagging.fit_tools.read_pkb(file_name)
@@ -2229,6 +2626,16 @@ class Interactive(Environment):
         return df_pkb
 
     def load_table_2(self):
+        """
+        Loads mode data from a default PKB file into Table 2.
+
+        Constructs the path to a default PKB file ('modes_parameter_selected.pkb')
+        located in the current source's data folder.
+        Calls `load_pkb_to_second_tab()` to process this file.
+        The returned DataFrame is used to update `self.tb_se_second_source.data`.
+        Calls `apply_modes()` to update mode assignments on plots based on the loaded data.
+        A message is published to the UI.
+        """
         self.publish_message(text='Loading pkb')
         id=self.env.tb_source.data['id'][0]
         data_folder = self.env.tb_source.data['data_folder'][id]
@@ -2241,8 +2648,8 @@ class Interactive(Environment):
         df=self.load_pkb_to_second_tab(file_name)
 
         old_data = ColumnDataSource(
-                    data=dict(Slicefreq = df['Slicefreq'].to_list(), 
-                            Frequency = df['Frequency'].to_list(), 
+                    data=dict(Slicefreq = df['Slicefreq'].to_list(),
+                            Frequency = df['Frequency'].to_list(),
                             Power = df['Power'].to_list(),
                             Mode = df['Mode'].to_list(),
                             xx = df['xx'].to_list()
@@ -2342,6 +2749,14 @@ class Interactive(Environment):
         #     old_data = ColumnDataself.env.selected_filename_textSource(df_other.to_dict('list'))
         #     self.env.tb_other_periodogram.data = dict(old_data.data)
     def publish_message(self,text=''):
+        """
+        Displays a status message in the application's message banner.
+
+        The message is prefixed with the current source's ID (`id_mycatalog`).
+
+        Args:
+            text (str, optional): The message text to display. Defaults to ''.
+        """
         id=self.env.tb_source.data['id'][0]
         id_mycatalog=self.env.tb_source.data['id_mycatalog_all'][id]
         #id_text=self.env.tb_source.data['id_mycatalog'][0]
@@ -2355,6 +2770,20 @@ class Interactive(Environment):
         self.env.message_banner.text=full_text
 
     def apply_modes(self,table):
+        """
+        Applies mode assignments from a given table to the periodogram and echelle grid.
+
+        Iterates through unique mode labels in the input `table`. For each mode,
+        it identifies the corresponding frequencies and updates the 'Mode' column
+        in both `self.env.tb_grid_source` (echelle grid) and
+        `self.env.tb_other_periodogram` (main periodogram).
+        This visually updates the coloring of points on these plots.
+
+        Args:
+            table (pandas.DataFrame): A DataFrame containing at least 'Frequency'
+                                      and 'Mode' columns. Typically, this is
+                                      `self.tb_se_second_source.to_df()`.
+        """
         self.publish_message(text='Applying Modes')
         df_second=table
         df_second['Mode']=df_second['Mode'].astype(str)
@@ -2388,9 +2817,17 @@ class Interactive(Environment):
 
 
     def load_from_file(self):
-        '''
-        Load pkb from file
-        '''
+        """
+        Loads mode data from a user-selected PKB file into Table 2.
+
+        Opens a Tkinter file dialog for the user to select a PKB file.
+        If a file is selected:
+        - Calls `load_pkb_to_second_tab()` to process the file.
+        - Updates `self.tb_se_second_source.data` with the loaded data.
+        - Calls `apply_modes()` to reflect changes on plots.
+        - Updates `self.env.selected_filename_pkb_text` with the chosen filename.
+        - Publishes status messages.
+        """
         self.publish_message(text='Loading from File')
 
         root = Tk()
@@ -2406,8 +2843,8 @@ class Interactive(Environment):
             df=self.load_pkb_to_second_tab(file_name)
             
             old_data = ColumnDataSource(
-                        data=dict(Slicefreq = df['Slicefreq'].to_list(), 
-                                Frequency = df['Frequency'].to_list(), 
+                        data=dict(Slicefreq = df['Slicefreq'].to_list(),
+                                Frequency = df['Frequency'].to_list(),
                                 Power = df['Power'].to_list(),
                                 Mode = df['Mode'].to_list(),
                                 xx = df['xx'].to_list()
@@ -2420,9 +2857,15 @@ class Interactive(Environment):
 
 
     def load_bkg_param_from_file(self):
-        '''
-        Load BKG from background file
-        '''
+        """
+        Loads background parameters from a user-selected file.
+
+        Opens a Tkinter file dialog for the user to select a file.
+        If a file is selected, its path is stored in
+        `self.env.selected_filename_background_text`. This filename is then
+        used by `calculate_synthetic_psd()`.
+        Publishes status messages.
+        """
         self.publish_message(text='Loading BKG from File')
 
         root = Tk()
@@ -2441,8 +2884,8 @@ class Interactive(Environment):
             # df=self.load_pkb_to_second_tab(file_name)
             
             # old_data = ColumnDataSource(
-            #             data=dict(Slicefreq = df['Slicefreq'].to_list(), 
-            #                     Frequency = df['Frequency'].to_list(), 
+            #             data=dict(Slicefreq = df['Slicefreq'].to_list(),
+            #                     Frequency = df['Frequency'].to_list(),
             #                     Power = df['Power'].to_list(),
             #                     Mode = df['Mode'].to_list(),
             #                     xx = df['xx'].to_list()
@@ -2455,12 +2898,23 @@ class Interactive(Environment):
 
 
     def save_as_table_2(self):
+        """
+        Saves the contents of Table 2 to a user-specified PKB file.
+
+        Opens a Tkinter "save as" dialog for the user to choose a filename
+        (default extension .pkb).
+        If a filename is provided:
+        - Data from `self.tb_se_second_source` is retrieved.
+        - It's converted to PKB format (calculating 'n' values from delta Nu).
+        - The data is saved to the chosen file using `apollinaire.peakbagging.save_pkb`.
+        - A status message is published.
+        """
         self.publish_message(text='Saving File')
         print('Load from file')
         root = Tk()
         root.attributes('-topmost', True)
         root.withdraw()
-        filename = asksaveasfilename(defaultextension=".pkb") 
+        filename = asksaveasfilename(defaultextension=".pkb")
         if filename:
             print(filename)
             df=self.tb_se_second_source.to_df()
@@ -2486,6 +2940,21 @@ class Interactive(Environment):
             self.publish_message(text=fulltext)
 
     def toggle_periodogram_axis_scale(self, attr, old, new):
+        """
+        Toggles the y-axis and x-axis scales of the main periodogram between linear and log.
+
+        (Note: Docstring in code says "Changing periodogram scale: Not working")
+        If the 'Log Scale' checkbox (`self.env.check_periodogram_axis_scale`) is active (0 in `new`),
+        it attempts to set both X and Y scales of `self.env.fig_other_periodogram`
+        to `LogScale`. Otherwise, it sets them to `LinearScale`.
+        This function may require further refinement to work correctly with Bokeh's
+        range and scale update mechanisms.
+
+        Args:
+            attr: The attribute that changed (e.g., 'active').
+            old: The old list of active indices.
+            new: The new list of active indices for the checkbox group.
+        """
 
         print('Changing periodogram scale: Not working')
         from bokeh.models import Range1d, LogScale, LinearScale
@@ -2498,10 +2967,10 @@ class Interactive(Environment):
             self.env.fig_other_periodogram.x_scale = LogScale()
         else:
             # Set to linear scale
-            self.env.fig_other_periodogram.y_range = Range1d(start=0, end=10, bounds="auto")
-            self.env.fig_other_periodogram.x_range = Range1d(start=0, end=10, bounds="auto")
+            self.env.fig_other_periodogram.y_range = Range1d(start=0, end=10, bounds="auto") # Example range, might need dynamic update
+            self.env.fig_other_periodogram.x_range = Range1d(start=0, end=10, bounds="auto") # Example range, might need dynamic update
             self.env.fig_other_periodogram.y_scale = LinearScale()
             self.env.fig_other_periodogram.x_scale = LinearScale()
 
-        #self.env.fig_other_periodogram.reset.emit()
+        #self.env.fig_other_periodogram.reset.emit() # May not be the correct way to force refresh
 
