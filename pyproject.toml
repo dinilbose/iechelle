@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "iechelle"
+version = "0.1.0"
+description = "Interactive Echelle Diagram Tool for Asteroseismology"
+authors = ["iEchelle Contribution Bot <bot@example.com>"]
+license = "LGPL-2.1"
+readme = "README.md"
+packages = [{include = "iechelle"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[tool.poetry.group.dev.dependencies]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

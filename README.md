@@ -37,27 +37,20 @@ The application requires the following Python libraries:
     ```
 3.  **Install dependencies:**
     Create a `requirements.txt` file with the following content:
-    ```
-    bokeh
-    numpy
-    pandas
-    astropy
-    lightkurve
-    apollinaire-plot
-    matplotlib
-    ```
-    Then install them using pip:
+    This project uses Poetry for dependency management and packaging. Ensure you have Poetry installed. You can install it following the instructions on the [official Poetry website](https://python-poetry.org/docs/#installation).
+    Once Poetry is installed, navigate to the project root directory and run:
     ```bash
-    pip install -r requirements.txt
+    poetry install
     ```
+    This will create a virtual environment (if one isn't active) and install all necessary dependencies.
     *(Note: `apollinaire-plot` is the typical package name for Apollinaire, confirm if a different one was used if issues arise.)*
 
 ## Running the Application
 
-The application is launched as a Bokeh server application. From the root directory of the project:
+After installing dependencies with Poetry, you can run the application using Poetry's `run` command, which executes commands within the project's virtual environment:
 
 ```bash
-bokeh serve --show iechelle/gui/main.py
+poetry run bokeh serve --show iechelle/gui/main.py
 ```
 
 This will typically open the application in a new browser tab.
